@@ -1,0 +1,22 @@
+{
+  "name": "nutritrack-push-worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "NutriTrack push backend on Cloudflare Workers. Zero dependencies at runtime — Web Push is implemented directly on Web Crypto.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:local": "wrangler d1 execute nutritrack-push --file schema.sql --local",
+    "db:remote": "wrangler d1 execute nutritrack-push --file schema.sql --remote",
+    "tail": "wrangler tail",
+    "test": "node --test src/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "allowScripts": {
+    "workerd@1.20260804.1": true,
+    "esbuild@0.28.1": true
+  }
+}

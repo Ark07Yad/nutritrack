@@ -134,12 +134,19 @@ src/
 public/
   sw.js            Service worker: turns a push into a notification, on-device
 
-server/            Optional. Web Push backend — see server/README.md
+worker/            Optional. Push backend on Cloudflare Workers (recommended)
+  src/
+    index.js       Routes + the native cron handler
+    push.js        RFC 8291/8292 on Web Crypto, no dependencies
+    db.js          D1 storage
+    push.test.js   Crypto tests, incl. an RFC 5869 vector and a round-trip decrypt
+server/            Optional. The same backend on Node
   src/
     index.js       Six routes, no framework
-    scheduler.js   Per-device local-time scheduling (tested)
+    schedule-core.js  Shared with the Worker — the only real logic, and tested
+    scheduler.js   Timer and tick loop
     db.js          node:sqlite storage
-    push.js        VAPID send, expiry pruning
+    push.js        VAPID send via web-push, expiry pruning
 ```
 
 Meals are composed from food IDs rather than hardcoded nutrition, so correcting
@@ -185,18 +192,37 @@ whenever NutriTrack is open in a tab — a backgrounded tab counts, as does an
 installed PWA in your app switcher. Close it completely and nothing fires until
 you reopen it, at which point anything missed appears as a banner.
 
-**Background push (optional).** Run the server in `server/` and reminders arrive
-with the app fully closed, like any other app's notifications.
+**Background push (optional).** Run a push backend and reminders arrive with the
+app fully closed, like any other app's notifications. There are two, with the
+same API — the app cannot tell them apart:
+
+| | [`worker/`](worker) — Cloudflare | [`server/`](server) — Node |
+| --- | --- | --- |
+| Scheduling | Native cron, every minute | In-process timer, or an external cron |
+| Accuracy | To the minute | ±10 min on a host that sleeps |
+| Cost | Free, genuinely | Needs a paid always-on host, or tolerates sleeping |
+| Dependencies | None — Web Push on Web Crypto | `web-push` |
+
+**Cloudflare is the one to pick.**
 
 ```bash
-cd server
-npm install
-npm run keys        # generate VAPID keys, paste into .env
-npm start
+cd worker
+npx wrangler login      # opens a browser — the only manual step
+./scripts/deploy.sh
 ```
 
-Then set `VITE_PUSH_SERVER=http://localhost:8787` in `.env.local`, restart Vite,
-and enable it in Settings → Reminders.
+Or run either locally:
+
+```bash
+cd worker && npm run db:local && npm run dev     # :8788
+cd server && npm install && npm run keys && npm start   # :8787
+```
+
+Then set `VITE_PUSH_SERVER` in `.env.local`, restart Vite, and enable it in
+Settings → Reminders.
+
+Both share `server/src/schedule-core.js`, so the decision of *when* to send is
+one file with one set of tests rather than two implementations that drift.
 
 ### What the push server knows
 
@@ -213,7 +239,8 @@ because the server sends only a wake-up signal (`{"kind":"water"}`), and the
 service worker on your device opens the local database and writes that sentence
 itself. The numbers never leave the phone.
 
-Full detail, API reference and deployment notes: [`server/README.md`](server/README.md).
+Full detail, API reference and deployment notes:
+[`worker/README.md`](worker/README.md) · [`server/README.md`](server/README.md).
 
 ---
 

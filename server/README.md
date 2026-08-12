@@ -1,7 +1,12 @@
-# NutriTrack push backend
+# NutriTrack push backend — Node
 
 Sends the reminders that arrive when NutriTrack is **fully closed**. Without
 this, reminders still work — they just need the app open in a tab.
+
+> There is a **Cloudflare Workers port** in [`../worker`](../worker) with the
+> same API. It has a native one-minute cron, needs no always-on process, and is
+> genuinely free — prefer it unless you specifically want to self-host Node.
+> The two share `src/schedule-core.js`, so the scheduling logic cannot drift.
 
 It is deliberately small: one file of routes, one of scheduling, one of storage.
 No framework, and the only dependency is `web-push`.
@@ -169,11 +174,9 @@ and your next visit, rather than losing them permanently.
 disk, which removes both caveats — at the cost of setting up a machine yourself.
 Card verification required.
 
-**Cloudflare Workers + D1** would be the best free fit of all: always available,
-a built-in one-minute cron so GitHub Actions is not needed, and free SQLite.
-It needs a port, because `web-push` depends on Node's crypto — the Web Crypto
-equivalent is `@block65/webcrypto-web-push`. Worth doing if this ever outgrows
-a hobby deployment.
+**Cloudflare Workers + D1** is the best free fit, and it is already built —
+see [`../worker`](../worker). Always available, a built-in one-minute cron so
+GitHub Actions is not needed, free SQLite, and no dependencies.
 
 **Not free, despite older guides saying so:** Fly.io removed its free allowance
 for new organisations, and Railway's free credit is a trial rather than a tier.

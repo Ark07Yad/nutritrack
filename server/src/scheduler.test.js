@@ -8,7 +8,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { decide } from './scheduler.js';
+import { decide } from './schedule-core.js';
 
 const base = {
   id: 't',

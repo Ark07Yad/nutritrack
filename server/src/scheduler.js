@@ -11,64 +11,10 @@ import {
   listActive, markWaterSent, markStreakSent, pruneStale, subscriptionCount,
 } from './db.js';
 import { sendTo, vapidConfigured } from './push.js';
+// Shared with the Cloudflare Worker so the two cannot drift.
+import { decide, MINUTE } from './schedule-core.js';
 
-const MINUTE = 60_000;
-
-/* ─────────────────────────── Local-time helpers ─────────────────────────── */
-
-/**
- * `tzOffsetMinutes` is minutes to ADD to UTC to reach the device's wall clock
- * (+330 for IST). Shifting the timestamp and then reading UTC fields gives us
- * that wall clock without dragging in a timezone database.
- */
-function localParts(tzOffsetMinutes, at = Date.now()) {
-  const d = new Date(at + tzOffsetMinutes * MINUTE);
-  return {
-    minutes: d.getUTCHours() * 60 + d.getUTCMinutes(),
-    day: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`,
-  };
-}
-
-const toMinutes = (hhmm) => {
-  const [h, m] = String(hhmm).split(':').map(Number);
-  return (h || 0) * 60 + (m || 0);
-};
-
-/** Handles windows that wrap past midnight, e.g. 22:00 → 06:00. */
-const withinWindow = (now, from, to) => {
-  const a = toMinutes(from);
-  const b = toMinutes(to);
-  return b >= a ? now >= a && now <= b : now >= a || now <= b;
-};
-
-/* ──────────────────────────────── Decisions ─────────────────────────────── */
-
-/**
- * Pure: given a row and the current instant, what should be sent?
- * Exported so the logic can be reasoned about (and tested) without a database.
- */
-export function decide(row, at = Date.now()) {
-  const out = [];
-  const { minutes, day } = localParts(row.tz_offset_min, at);
-
-  if (row.water_on) {
-    const goalAlreadyMet = row.water_done_day === day;
-    const due = at - row.last_water_at >= row.water_every_min * MINUTE;
-    if (!goalAlreadyMet && due && withinWindow(minutes, row.water_from, row.water_to)) {
-      out.push({ kind: 'water', day });
-    }
-  }
-
-  if (row.streak_on) {
-    const alreadySentToday = row.last_streak_day === day;
-    const alreadyLogged = row.logged_day === day;
-    if (!alreadySentToday && !alreadyLogged && minutes >= toMinutes(row.streak_at)) {
-      out.push({ kind: 'streak', day });
-    }
-  }
-
-  return out;
-}
+export { decide };
 
 /* ────────────────────────────────── Loop ────────────────────────────────── */
 

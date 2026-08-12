@@ -1,0 +1,51 @@
+# Cloudflare Workers deployment.
+#
+#   npx wrangler login                                   # opens a browser
+#   npx wrangler d1 create nutritrack-push               # paste the id below
+#   npx wrangler d1 execute nutritrack-push --file schema.sql --remote
+#   npx wrangler secret put VAPID_PRIVATE_KEY
+#   npx wrangler secret put TICK_SECRET                  # optional
+#   npx wrangler deploy
+#
+# Everything here fits inside Cloudflare's free plan: 100k requests a day, a
+# 5 GB D1 database, and cron triggers at no cost.
+
+name = "nutritrack-push"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# Node compatibility is deliberately NOT enabled. Web Push is implemented on
+# Web Crypto in src/push.js precisely so this can run on the plain runtime.
+
+# ── The reason this port exists ──
+# A real cron trigger, every minute, with no always-on process to pay for and
+# no external pinger. Reminders land on the minute rather than within ±10.
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nutritrack-push"
+# Replace with the id printed by `wrangler d1 create nutritrack-push`.
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[vars]
+# The public key is not a secret — browsers need it to subscribe.
+# Set it here after running `npm run keys` in ../server.
+VAPID_PUBLIC_KEY = ""
+VAPID_SUBJECT = "mailto:you@example.com"
+# Set to your app's real origin before going live. "*" is for local dev.
+ALLOWED_ORIGINS = "*"
+
+# Secrets — never put these in this file:
+#   wrangler secret put VAPID_PRIVATE_KEY
+#   wrangler secret put TICK_SECRET
+#
+# Locally they come from .dev.vars, which is gitignored.
+
+[observability]
+enabled = true
+
+[observability.logs]
+# Cron failures are otherwise invisible — there is no request to inspect.
+enabled = true
