@@ -1,0 +1,56 @@
+# Fly.io deployment.
+#
+#   fly auth login
+#   fly launch --no-deploy --copy-config --name <your-app-name>
+#   fly volumes create push_data --size 1 --region bom
+#   fly secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... \
+#                   VAPID_SUBJECT=mailto:you@example.com \
+#                   TICK_SECRET=$(openssl rand -hex 32) \
+#                   ALLOWED_ORIGINS=https://your-app-origin
+#   fly deploy
+#
+# Machines suspend when idle to keep the cost near zero. That stops the
+# in-process timer, so INTERNAL_SCHEDULER is off and the GitHub Actions cron in
+# .github/workflows/push-tick.yml drives the schedule instead — the request
+# itself wakes the machine. If you would rather pay for always-on, set
+# min_machines_running = 1 and INTERNAL_SCHEDULER = "true".
+
+app = "nutritrack-push"
+primary_region = "bom"   # Mumbai. Use `fly platform regions` to see the list.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8787"
+  DATABASE_PATH = "/data/push.db"
+  INTERNAL_SCHEDULER = "false"
+
+[http_service]
+  internal_port = 8787
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[http_service.checks]]
+  grace_period = "5s"
+  interval = "30s"
+  method = "GET"
+  path = "/health"
+  timeout = "5s"
+
+# Subscriptions live here. Without a volume they are lost on every deploy and
+# every device has to re-enable push.
+[mounts]
+  source = "push_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

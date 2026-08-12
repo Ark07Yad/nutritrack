@@ -13,6 +13,7 @@
 
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
+import crypto from 'node:crypto';
 
 // Load .env before anything reads process.env.
 try {
@@ -63,6 +64,19 @@ const send = (res, status, body) => {
   });
   res.end(payload);
 };
+
+/** Constant-time compare, so the tick secret cannot be guessed byte by byte. */
+function timingSafeEqual(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Still burn a comparison so length is not leaked by timing alone.
+    crypto.timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 const MAX_BODY = 8 * 1024; // a subscription is ~500 bytes; anything larger is junk
 
@@ -178,6 +192,35 @@ const server = createServer(async (req, res) => {
       if (req.method === 'DELETE') {
         return send(res, 200, { removed: removeSubscription(id) });
       }
+    }
+
+    /* Run one scheduler pass on demand.
+
+       This is what makes free hosting viable. Most free tiers stop your
+       process after ~15 minutes idle, which kills an in-process timer and
+       therefore every reminder. Driving the tick from outside — a GitHub
+       Actions cron, or any uptime pinger — means the request itself wakes the
+       service, so reminders keep working on a host that sleeps.
+
+       Guarded by a shared secret: anyone who could call this freely could
+       force-send pushes to every subscriber. */
+    if (req.method === 'POST' && path === '/api/tick') {
+      const secret = process.env.TICK_SECRET;
+      if (!secret) return send(res, 503, { error: 'TICK_SECRET is not set on this server' });
+
+      const provided = req.headers.authorization?.replace(/^Bearer\s+/i, '') || url.searchParams.get('key');
+      if (!timingSafeEqual(provided, secret)) return send(res, 401, { error: 'Unauthorized' });
+
+      const before = scheduler.getStats();
+      await scheduler.runTick();
+      const after = scheduler.getStats();
+      return send(res, 200, {
+        ok: true,
+        sent: after.sent - before.sent,
+        pruned: after.pruned - before.pruned,
+        failed: after.failed - before.failed,
+        subscriptions: subscriptionCount(),
+      });
     }
 
     /* Fire one push immediately, so "Send a test" proves the whole chain —

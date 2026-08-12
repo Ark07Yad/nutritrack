@@ -1,0 +1,39 @@
+# Render blueprint. Deploy with the button in server/README.md, or point
+# Render at this repo and it will pick this file up.
+#
+# Two things to know about the free plan:
+#   · The service sleeps after ~15 minutes idle, which kills an in-process
+#     timer. INTERNAL_SCHEDULER is therefore off and the GitHub Actions cron
+#     drives the schedule — each request wakes the service.
+#   · Free services have no persistent disk, so subscriptions are lost on
+#     redeploy and devices must re-enable push. Upgrade to Starter and add a
+#     disk mounted at /var/data if that matters.
+
+services:
+  - type: web
+    name: nutritrack-push
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: server
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: INTERNAL_SCHEDULER
+        value: "false"
+      - key: DATABASE_PATH
+        value: ./data/push.db
+      # Set these in the Render dashboard — never commit them.
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_SUBJECT
+        sync: false
+      - key: TICK_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false

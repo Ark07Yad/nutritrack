@@ -131,6 +131,10 @@ export function start() {
     console.warn('[scheduler] VAPID keys missing — not starting. Run `npm run keys`.');
     return;
   }
+  if (process.env.INTERNAL_SCHEDULER === 'false') {
+    console.log('[scheduler] internal timer disabled — expecting external POST /api/tick');
+    return;
+  }
 
   // Align to the top of the next minute so notifications land on the clock
   // rather than drifting by however long boot took.

@@ -1,0 +1,59 @@
+# Drives the reminder schedule from outside the server.
+#
+# The push backend can run on a free tier that sleeps when idle, because this
+# request wakes it. GitHub Actions is free for public repositories.
+#
+# Setup — repository Settings → Secrets and variables → Actions:
+#   PUSH_SERVER_URL   https://your-server.fly.dev   (no trailing slash)
+#   TICK_SECRET       the same value set on the server
+#
+# Until both exist the job exits quietly rather than failing every five
+# minutes and filling your inbox.
+
+name: Reminder tick
+
+on:
+  schedule:
+    # Every 5 minutes — the finest granularity GitHub offers. Scheduled runs
+    # can be delayed by a few minutes under load, so treat reminder times as
+    # approximate to within ~10 minutes.
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: reminder-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Trigger the scheduler
+        env:
+          URL: ${{ secrets.PUSH_SERVER_URL }}
+          SECRET: ${{ secrets.TICK_SECRET }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "PUSH_SERVER_URL or TICK_SECRET is not set — nothing to do."
+            echo "Add them in Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+
+          # Retry: a sleeping free-tier instance can take a few seconds to boot.
+          for attempt in 1 2 3; do
+            code=$(curl -sS -m 45 -o /tmp/tick.json -w '%{http_code}' \
+              -X POST "$URL/api/tick" \
+              -H "Authorization: Bearer $SECRET") || code=000
+
+            if [ "$code" = "200" ]; then
+              echo "Tick OK: $(cat /tmp/tick.json)"
+              exit 0
+            fi
+
+            echo "Attempt $attempt failed (HTTP $code): $(cat /tmp/tick.json 2>/dev/null)"
+            [ $attempt -lt 3 ] && sleep 10
+          done
+
+          echo "::error::Could not reach the push server after 3 attempts."
+          exit 1

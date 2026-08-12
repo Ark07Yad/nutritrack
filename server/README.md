@@ -66,6 +66,8 @@ Copy `.env.example` to `.env`:
 | `PORT` | `8787` | |
 | `ALLOWED_ORIGINS` | `*` | Set to your app's real origin in production |
 | `DATABASE_PATH` | `./data/push.db` | Mount as a volume in a container |
+| `TICK_SECRET` | — | Required to use `POST /api/tick`. Generate with `openssl rand -hex 32` |
+| `INTERNAL_SCHEDULER` | `true` | Set `false` when an external cron drives the tick |
 
 Rotating the VAPID keys invalidates every existing subscription — every device
 has to re-enable push. Generate once and keep them.
@@ -83,6 +85,7 @@ has to re-enable push. Generate once and keep them.
 | `PATCH` | `/api/subscribe/:id` | Update schedule or the two suppression flags |
 | `DELETE` | `/api/subscribe/:id` | Unsubscribe |
 | `POST` | `/api/test/:id` | Send one push immediately |
+| `POST` | `/api/tick` | Run one scheduler pass. Requires `TICK_SECRET` |
 
 Responses never include the push endpoint or keys — only the schedule.
 
@@ -120,27 +123,84 @@ retried. Devices that have not checked in for 90 days are pruned hourly.
 
 ## Deploying
 
-Any host that runs Node 22+ and gives you a persistent disk works. Set the
-environment variables, mount a volume at `DATABASE_PATH`, and run `npm start`.
+### The scheduling problem, and why it is solved this way
 
-```dockerfile
-FROM node:22-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY src ./src
-ENV DATABASE_PATH=/data/push.db
-VOLUME /data
-EXPOSE 8787
-CMD ["node", "src/index.js"]
+Reminders need something to fire every minute. An in-process `setInterval` does
+that fine on a machine that stays up — but almost every free tier stops your
+process after ~15 minutes idle, which silently kills every reminder.
+
+So the tick can also be driven from outside:
+
+```
+POST /api/tick
+Authorization: Bearer $TICK_SECRET
 ```
 
-Two things that will bite you otherwise:
+The request itself wakes a sleeping instance. `.github/workflows/push-tick.yml`
+calls it every five minutes, and GitHub Actions is free on public repositories.
+Set `INTERNAL_SCHEDULER=false` when you rely on this, so the two do not both run.
 
-- **Set `ALLOWED_ORIGINS`** to your real origin. The `*` default is for local
-  development.
-- **Serve the app over HTTPS.** Service workers and push are refused on plain
-  HTTP everywhere except `localhost`.
+The trade is precision: GitHub's scheduled runs are five-minute granularity and
+can be delayed a few minutes under load, so reminder times are accurate to
+roughly ±10 minutes. For a 90-minute water interval and an evening streak check
+that is unnoticeable. If you want to-the-minute delivery, keep the process
+always-on and leave `INTERNAL_SCHEDULER` at its default.
+
+### Fly.io — one command
+
+Suits this best: real persistent volumes, and machines that suspend when idle so
+the cost stays near zero.
+
+```bash
+fly auth login          # opens a browser — the only manual step
+cd server
+./scripts/deploy-fly.sh my-nutritrack-push
+```
+
+The script generates or reuses your VAPID keys, creates the app and a 1 GB
+volume, sets every secret, deploys, health-checks the result, and prints the
+exact repo secrets to add for the cron. It is idempotent — run it again to
+redeploy.
+
+### Render — one click
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Ark07Yad/nutritrack)
+
+Reads `render.yaml` from the repo root. Set `VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and `ALLOWED_ORIGINS` in the dashboard when
+prompted; `TICK_SECRET` is generated for you.
+
+Be aware of the free plan: **no persistent disk**, so subscriptions are lost on
+every redeploy and each device has to re-enable push. Fine for trying it out,
+not for real use — add a Starter plan with a disk mounted at `/var/data` and set
+`DATABASE_PATH=/var/data/push.db`.
+
+### Anywhere else
+
+Any host that runs Node 22+ works — there is a `Dockerfile`, and the only state
+is one SQLite file. Set the environment variables, mount a volume at
+`DATABASE_PATH`, run `node src/index.js`.
+
+### After deploying
+
+1. Point the app at the server — `VITE_PUSH_SERVER=https://…` in
+   `nutritrack/.env.local`, then rebuild the frontend.
+2. Add the cron secrets, so reminders actually fire:
+   ```bash
+   gh secret set PUSH_SERVER_URL --body "https://your-server.fly.dev"
+   gh secret set TICK_SECRET --body "the-same-secret-as-the-server"
+   ```
+3. Lock down CORS: set `ALLOWED_ORIGINS` to your frontend's real origin. The
+   `*` default is for local development only.
+4. **Serve the frontend over HTTPS.** Service workers and push are refused on
+   plain HTTP everywhere except `localhost`.
+
+Verify it end to end:
+
+```bash
+curl https://your-server.fly.dev/health
+curl -X POST https://your-server.fly.dev/api/tick -H "Authorization: Bearer $TICK_SECRET"
+```
 
 ---
 
