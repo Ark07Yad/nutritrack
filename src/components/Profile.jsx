@@ -9,6 +9,10 @@ import {
 } from '../lib/reminders';
 import { storageStatus, requestPersistence, listSnapshots, restoreSnapshot } from '../lib/persist';
 import {
+  checkServer, subscribe, unsubscribe, sendTestPush,
+  pushServerConfigured, pushServerUrl, pushSupported,
+} from '../lib/push';
+import {
   Badge, Button, Card, Field, Icon, Input, Segmented, Select,
   SectionTitle, Sheet, Stat,
 } from './ui';
@@ -431,25 +435,160 @@ function ReminderSettings({ toast }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="ghost" size="sm" onClick={testNow}>
               <Icon name="send" className="size-3.5" /> Send a test
             </Button>
             <span className="text-[11.5px] text-faint">{describeSchedule(r)}</span>
           </div>
 
-          <div className="p-3 rounded-2xl flex gap-2.5" style={{ background: 'var(--surface)' }}>
-            <Icon name="info" className="size-4 text-info shrink-0 mt-0.5" />
-            <p className="text-[11.5px] text-dim leading-relaxed">
-              Worth being straight about how this works: NutriTrack has no server, so there is no push
-              infrastructure behind these. Reminders fire while the app is open in a tab — a backgrounded tab
-              counts, and so does an installed app sitting in your app switcher. Close it completely and nothing
-              fires until you open it again, at which point anything you missed appears as an in-app banner.
-            </p>
-          </div>
+          <BackgroundPush toast={toast} />
         </div>
       )}
     </Card>
+  );
+}
+
+/* ────────────────────────── Background push (server) ────────────────────── */
+
+function BackgroundPush({ toast }) {
+  const { state, dispatch, waterGoalGlasses } = useStore();
+  const active = !!(state.push?.enabled && state.push?.id);
+  const [server, setServer] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { checkServer().then(setServer); }, []);
+
+  const enable = async () => {
+    setBusy(true);
+    try {
+      const id = await subscribe({
+        reminders: state.reminders,
+        days: state.days,
+        waterGoalGlasses,
+      });
+      dispatch({ type: 'push', patch: { enabled: true, id, syncedAt: Date.now() } });
+      toast('Background reminders on');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setBusy(false);
+      checkServer().then(setServer);
+    }
+  };
+
+  const disable = async () => {
+    setBusy(true);
+    await unsubscribe(state.push?.id);
+    dispatch({ type: 'push', patch: { enabled: false, id: null, syncedAt: 0 } });
+    setBusy(false);
+    toast('Back to in-app reminders only');
+    checkServer().then(setServer);
+  };
+
+  const test = async () => {
+    setBusy(true);
+    try {
+      await sendTestPush(state.push?.id);
+      toast('Sent from the server — it should arrive shortly');
+    } catch (err) {
+      toast(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ── Not configured at build time ── */
+  if (!pushServerConfigured) {
+    return (
+      <div className="p-3.5 rounded-2xl" style={{ background: 'var(--surface)' }}>
+        <div className="flex gap-2.5">
+          <Icon name="info" className="size-4 text-info shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <div className="text-[13px] font-medium">Reminders need the app open</div>
+            <p className="text-[11.5px] text-dim mt-1 leading-relaxed">
+              No push server is configured, so reminders fire while NutriTrack is open in a tab — a backgrounded
+              tab counts, and so does an installed app in your app switcher. Close it completely and nothing fires
+              until you reopen it, at which point anything missed appears as a banner.
+            </p>
+            <p className="text-[11.5px] text-faint mt-2 leading-relaxed">
+              For reminders that arrive with the app fully closed, run the push backend in{' '}
+              <code className="px-1 py-0.5 rounded" style={{ background: 'var(--border)' }}>server/</code> and set{' '}
+              <code className="px-1 py-0.5 rounded" style={{ background: 'var(--border)' }}>VITE_PUSH_SERVER</code>.
+              Setup is in the README.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const unreachable = server && !server.reachable;
+  const noKeys = server?.reachable && !server.vapidConfigured;
+
+  return (
+    <div className="p-4 rounded-2xl" style={{ background: 'var(--surface)' }}>
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13.5px] font-medium">Background push</span>
+            <Badge tone={active ? 'good' : unreachable ? 'bad' : 'neutral'}>
+              {active ? 'On' : unreachable ? 'Server unreachable' : 'Off'}
+            </Badge>
+          </div>
+          <p className="text-[11.5px] text-faint mt-1 leading-relaxed">
+            Reminders arrive even with NutriTrack completely closed.
+          </p>
+        </div>
+      </div>
+
+      {unreachable && (
+        <p className="text-[11.5px] text-dim leading-relaxed mt-3">
+          Cannot reach <code>{pushServerUrl}</code> — {server.reason}. Start the server in{' '}
+          <code>server/</code> with <code>npm start</code>.
+        </p>
+      )}
+
+      {noKeys && (
+        <p className="text-[11.5px] text-dim leading-relaxed mt-3">
+          The server is running but has no VAPID keys. Run <code>npm run keys</code> in{' '}
+          <code>server/</code> and put them in <code>server/.env</code>.
+        </p>
+      )}
+
+      {server?.reachable && server.vapidConfigured && (
+        <>
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {active ? (
+              <>
+                <Button variant="ghost" size="sm" onClick={test} disabled={busy}>
+                  <Icon name="send" className="size-3.5" /> Test from server
+                </Button>
+                <Button variant="ghost" size="sm" onClick={disable} disabled={busy}>Turn off</Button>
+              </>
+            ) : (
+              <Button variant="primary" size="sm" onClick={enable} disabled={busy || !pushSupported()}>
+                <Icon name="bolt" className="size-3.5" /> Enable background push
+              </Button>
+            )}
+          </div>
+
+          {!pushSupported() && (
+            <p className="text-[11.5px] text-warn mt-2 leading-relaxed">
+              This browser does not support push. On iPhone you must add NutriTrack to your home screen first —
+              Safari only allows push from an installed app.
+            </p>
+          )}
+
+          <p className="text-[11.5px] text-faint mt-3 leading-relaxed">
+            What the server receives: your reminder schedule, your timezone offset, and two flags saying whether
+            today's water goal and logging are already done — so it does not nudge you about something you have
+            already handled. It never receives what you ate, your weight, or your name. The notification text is
+            written on this device by the service worker.
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 

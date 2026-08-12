@@ -1,0 +1,19 @@
+{
+  "name": "nutritrack-push",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Web Push backend for NutriTrack. Sends wake-up signals only \u2014 it never sees your food log.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "keys": "node scripts/generate-vapid.js",
+    "test": "node --test src/scheduler.test.js"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

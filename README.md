@@ -15,6 +15,12 @@ npm run dev
 
 Then open http://localhost:5180.
 
+Optionally, for reminders that arrive with the app closed:
+
+```bash
+cd server && npm install && npm run keys && npm start
+```
+
 ---
 
 ## What it does
@@ -52,9 +58,10 @@ wrong way for your goal. It needs no key, no account and no network.
 
 **Reminds you.** Water nudges through a window you choose, and an evening check
 that warns you when a logging streak is about to break — plus a celebration at
-3, 7, 14, 30, 60, 100, 180 and 365 days. Reminders arrive as system
-notifications, and always as an in-app banner too, so they still land if you
-declined the notification prompt.
+3, 7, 14, 30, 60, 100, 180 and 365 days. They arrive as system notifications,
+and always as an in-app banner too, so they still land if you declined the
+notification prompt. Run the optional push backend in `server/` and they arrive
+with the app fully closed.
 
 ---
 
@@ -120,9 +127,19 @@ src/
     reminders.js   Water and streak scheduling, notification delivery
     useNutrition.js  One hook that assembles targets vs. intake for a date
     coach.js       Local analysis engine, Q&A, and the hosted-model bridge
+    push.js        Client half of the optional push backend
   components/
     ui.jsx         Design system: cards, rings, bars, sheets, inline icons
     Onboarding · Dashboard · Diary · Workouts · Nutrients · Progress · Coach · Profile
+public/
+  sw.js            Service worker: turns a push into a notification, on-device
+
+server/            Optional. Web Push backend — see server/README.md
+  src/
+    index.js       Six routes, no framework
+    scheduler.js   Per-device local-time scheduling (tested)
+    db.js          node:sqlite storage
+    push.js        VAPID send, expiry pruning
 ```
 
 Meals are composed from food IDs rather than hardcoded nutrition, so correcting
@@ -158,17 +175,45 @@ no server means no sync. Settings → Export writes a JSON file for that.
 
 ---
 
-## Reminders, honestly
+## Reminders
 
-Background push needs a push server. This app deliberately has none, so
-reminders are scheduled in the page and delivered through a service worker.
-They fire whenever NutriTrack is open in a tab — a backgrounded tab counts, as
-does an installed PWA sitting in your app switcher. Close it completely and
-nothing fires until you open it again, at which point anything missed appears as
-an in-app banner.
+There are two delivery modes, and the Settings screen is explicit about which
+one you are on.
 
-The Settings screen says exactly this rather than implying push you are not
-getting.
+**In-app (default, no setup).** Reminders are scheduled in the page. They fire
+whenever NutriTrack is open in a tab — a backgrounded tab counts, as does an
+installed PWA in your app switcher. Close it completely and nothing fires until
+you reopen it, at which point anything missed appears as a banner.
+
+**Background push (optional).** Run the server in `server/` and reminders arrive
+with the app fully closed, like any other app's notifications.
+
+```bash
+cd server
+npm install
+npm run keys        # generate VAPID keys, paste into .env
+npm start
+```
+
+Then set `VITE_PUSH_SERVER=http://localhost:8787` in `.env.local`, restart Vite,
+and enable it in Settings → Reminders.
+
+### What the push server knows
+
+It is the one piece of NutriTrack that is not on your device, so this matters.
+
+It stores your push endpoint, your reminder schedule, a UTC offset, and two
+dates: "water goal met today" and "logged today". Those two exist only so it
+does not nudge you about something you have already done.
+
+It never receives what you ate, your weight, your name, or your targets.
+
+The notification still says *"6 of 15 glasses so far, 2.25 L left today"* —
+because the server sends only a wake-up signal (`{"kind":"water"}`), and the
+service worker on your device opens the local database and writes that sentence
+itself. The numbers never leave the phone.
+
+Full detail, API reference and deployment notes: [`server/README.md`](server/README.md).
 
 ---
 

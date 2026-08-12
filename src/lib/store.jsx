@@ -12,6 +12,7 @@ import { FOODS, NUTRIENT_KEYS, allowedDiets } from '../data/foods';
 import { EXERCISES } from '../data/exercises';
 import { todayKey } from './calc';
 import { DEFAULT_REMINDERS, runReminderTick, registerServiceWorker } from './reminders';
+import { syncPrefs } from './push';
 import * as persist from './persist';
 
 export const emptyDay = () => ({
@@ -46,6 +47,8 @@ const initialState = {
   savedMeals: [],
   ai: { provider: 'local', key: '', model: '' },
   reminders: DEFAULT_REMINDERS,
+  /** Background push: `id` is the server-side subscription id, or null. */
+  push: { enabled: false, id: null, syncedAt: 0 },
   theme: 'dark',
 };
 
@@ -63,6 +66,7 @@ function hydrateState(parsed) {
       water: { ...DEFAULT_REMINDERS.water, ...parsed.reminders?.water },
       streak: { ...DEFAULT_REMINDERS.streak, ...parsed.reminders?.streak },
     },
+    push: { ...initialState.push, ...parsed.push },
   };
 }
 
@@ -88,6 +92,9 @@ function reducer(state, action) {
 
     case 'reminders':
       return { ...state, reminders: { ...state.reminders, ...action.patch } };
+
+    case 'push':
+      return { ...state, push: { ...state.push, ...action.patch } };
 
     case 'remindersSection':
       return {
@@ -273,8 +280,12 @@ export function StoreProvider({ children }) {
   const latest = useRef(state);
   latest.current = state;
 
+  // When background push is live the server owns the schedule, and running the
+  // in-page timer as well would fire everything twice.
+  const backgroundPushActive = !!(state.push?.enabled && state.push?.id);
+
   useEffect(() => {
-    if (!remindersEnabled) return;
+    if (!remindersEnabled || backgroundPushActive) return;
 
     let stopped = false;
     const tick = async () => {
@@ -300,11 +311,74 @@ export function StoreProvider({ children }) {
       clearInterval(id);
       window.removeEventListener('focus', onFocus);
     };
-  }, [remindersEnabled]);
+  }, [remindersEnabled, backgroundPushActive]);
+
+  /* ── Keep the push server's copy of the schedule current ──
+     Debounced, and only when something it actually cares about changed: the
+     schedule itself, or whether today's water goal / logging is already done.
+     The server needs those two flags so it does not push a reminder you have
+     already acted on. */
+  const pushId = state.push?.id;
+  const today = todayKey();
+  const todayDay = state.days[today];
+  const waterGoalGlasses = Math.round(
+    (state.profile.gender === 'female' ? 2.7 : 3.7) / 0.25
+  );
+  const syncSignature = JSON.stringify({
+    r: state.reminders?.water,
+    s: state.reminders?.streak,
+    waterDone: (todayDay?.water || 0) >= waterGoalGlasses,
+    logged: !!todayDay && Object.values(todayDay.meals || {}).some((l) => l.length > 0),
+  });
+
+  useEffect(() => {
+    if (!ready || !pushId || !state.push?.enabled) return;
+    const id = setTimeout(() => {
+      syncPrefs(pushId, {
+        reminders: latest.current.reminders,
+        days: latest.current.days,
+        waterGoalGlasses,
+      })
+        .then(() => dispatch({ type: 'push', patch: { syncedAt: Date.now() } }))
+        .catch(() => { /* offline or server down; the next change retries */ });
+    }, 1500);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pushId, state.push?.enabled, syncSignature, waterGoalGlasses]);
+
+  /* ── Actions taken from a notification ── */
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+
+    const applyAction = (action) => {
+      if (action === 'log-water') {
+        const key = todayKey();
+        const glasses = (latest.current.days[key]?.water || 0) + 1;
+        dispatch({ type: 'setDayField', date: key, field: 'water', value: glasses });
+      }
+      // '#diary' is handled by App, which reads the hash on mount.
+    };
+
+    const onMessage = (event) => {
+      if (event.data?.type === 'notification-action') applyAction(event.data.action);
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+
+    // Cold start from a notification click arrives as a URL hash instead.
+    if (window.location.hash === '#log-water') {
+      applyAction('log-water');
+      history.replaceState(null, '', window.location.pathname);
+    }
+
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, []);
 
   const dismissNudge = (id) => setNudges((prev) => prev.filter((n) => n.id !== id));
 
-  const value = useMemo(() => ({ state, dispatch, nudges, dismissNudge }), [state, nudges]);
+  const value = useMemo(
+    () => ({ state, dispatch, nudges, dismissNudge, waterGoalGlasses }),
+    [state, nudges, waterGoalGlasses]
+  );
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
