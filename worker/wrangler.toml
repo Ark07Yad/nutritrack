@@ -27,12 +27,12 @@ crons = ["* * * * *"]
 binding = "DB"
 database_name = "nutritrack-push"
 # Replace with the id printed by `wrangler d1 create nutritrack-push`.
-database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+database_id = "eb29d07c-c435-4020-a845-7aca85d38487"
 
 [vars]
 # The public key is not a secret — browsers need it to subscribe.
 # Set it here after running `npm run keys` in ../server.
-VAPID_PUBLIC_KEY = ""
+VAPID_PUBLIC_KEY = "BCM8CkBi_ClghUIWrk_nFhnKswkTtqBU6HSBBma-_Ppqu2vABqtjU8wRh6RQI40qProV0NOCLz9qgtRZIhQfZHw"
 VAPID_SUBJECT = "mailto:you@example.com"
 # Set to your app's real origin before going live. "*" is for local dev.
 ALLOWED_ORIGINS = "*"
