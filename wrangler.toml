@@ -1,0 +1,19 @@
+# Frontend deployment — a static-assets Worker (Cloudflare's recommended path
+# for new projects, in place of Pages).
+#
+#   npm run build
+#   npx wrangler deploy
+#
+# The push backend is a separate Worker; its config lives in worker/.
+
+name = "nutritrack"
+compatibility_date = "2026-08-12"
+
+[assets]
+directory = "./dist"
+
+# The app is a single page with tab state rather than routed URLs, so anything
+# that is not a real file should fall back to index.html. Real files — /sw.js,
+# /icon.svg, /assets/* — are still served directly and are not rewritten, which
+# matters: a service worker served as HTML would fail to register.
+not_found_handling = "single-page-application"
