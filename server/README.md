@@ -146,6 +146,39 @@ roughly ±10 minutes. For a 90-minute water interval and an evening streak check
 that is unnoticeable. If you want to-the-minute delivery, keep the process
 always-on and leave `INTERNAL_SCHEDULER` at its default.
 
+### Running this for free
+
+Two properties of free tiers used to make them unusable for a reminder service.
+Both are now handled, so a free host is a real option rather than a compromise:
+
+| Free-tier limitation | How it is handled |
+| --- | --- |
+| The process sleeps after ~15 min idle, killing the timer | `POST /api/tick` is driven by GitHub Actions cron; the request wakes the instance |
+| No persistent disk, so the database is wiped on restart | The app re-registers automatically when the server returns 404 for its subscription |
+
+The second one matters more than it looks. Without it, a restart would silently
+end every reminder and the app would carry on believing it was subscribed.
+With it, the next time you open NutriTrack it notices the server has forgotten
+it and re-subscribes — so the worst case is missing reminders between a restart
+and your next visit, rather than losing them permanently.
+
+**Render's free plan** is the easiest of these: no card, sleeps when idle
+(fine), no disk (fine). Use the one-click button below.
+
+**Oracle Cloud Always Free** gives you a genuinely free always-on VM with real
+disk, which removes both caveats — at the cost of setting up a machine yourself.
+Card verification required.
+
+**Cloudflare Workers + D1** would be the best free fit of all: always available,
+a built-in one-minute cron so GitHub Actions is not needed, and free SQLite.
+It needs a port, because `web-push` depends on Node's crypto — the Web Crypto
+equivalent is `@block65/webcrypto-web-push`. Worth doing if this ever outgrows
+a hobby deployment.
+
+**Not free, despite older guides saying so:** Fly.io removed its free allowance
+for new organisations, and Railway's free credit is a trial rather than a tier.
+Both are cheap for something this small, but they will ask for a card.
+
 ### Fly.io — one command
 
 Suits this best: real persistent volumes, and machines that suspend when idle so
@@ -170,10 +203,13 @@ Reads `render.yaml` from the repo root. Set `VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and `ALLOWED_ORIGINS` in the dashboard when
 prompted; `TICK_SECRET` is generated for you.
 
-Be aware of the free plan: **no persistent disk**, so subscriptions are lost on
-every redeploy and each device has to re-enable push. Fine for trying it out,
-not for real use — add a Starter plan with a disk mounted at `/var/data` and set
-`DATABASE_PATH=/var/data/push.db`.
+The free plan has no persistent disk, so the subscription database is wiped on
+every restart and redeploy. The app handles that by re-registering when the
+server no longer recognises it, so this degrades to "you may miss reminders
+between a restart and your next visit" rather than breaking.
+
+If you would rather it never happen, take the Starter plan, add a disk mounted
+at `/var/data`, and set `DATABASE_PATH=/var/data/push.db`.
 
 ### Anywhere else
 

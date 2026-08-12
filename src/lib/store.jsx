@@ -339,7 +339,15 @@ export function StoreProvider({ children }) {
         days: latest.current.days,
         waterGoalGlasses,
       })
-        .then(() => dispatch({ type: 'push', patch: { syncedAt: Date.now() } }))
+        .then((currentId) => {
+          // syncPrefs re-registers if the server has forgotten us — which
+          // happens whenever a free-tier host restarts and loses its disk — so
+          // the id it returns is the authoritative one.
+          dispatch({
+            type: 'push',
+            patch: { syncedAt: Date.now(), ...(currentId !== pushId ? { id: currentId } : {}) },
+          });
+        })
         .catch(() => { /* offline or server down; the next change retries */ });
     }, 1500);
     return () => clearTimeout(id);

@@ -5,9 +5,10 @@
 #   · The service sleeps after ~15 minutes idle, which kills an in-process
 #     timer. INTERNAL_SCHEDULER is therefore off and the GitHub Actions cron
 #     drives the schedule — each request wakes the service.
-#   · Free services have no persistent disk, so subscriptions are lost on
-#     redeploy and devices must re-enable push. Upgrade to Starter and add a
-#     disk mounted at /var/data if that matters.
+#   · Free services have no persistent disk, so the subscription database is
+#     wiped on restart. The app re-registers itself when the server returns 404
+#     for its subscription, so this degrades gracefully rather than breaking.
+#     Upgrade to Starter with a disk at /var/data to avoid it entirely.
 
 services:
   - type: web

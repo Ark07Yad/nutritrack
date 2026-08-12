@@ -46,7 +46,13 @@ async function api(path, options = {}, timeoutMs = 8000) {
       headers: { 'Content-Type': 'application/json', ...options.headers },
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(body.error || `Server returned ${res.status}`);
+    if (!res.ok) {
+      const err = new Error(body.error || `Server returned ${res.status}`);
+      // Callers branch on this rather than on the message text, so rewording a
+      // server error cannot silently break behaviour.
+      err.status = res.status;
+      throw err;
+    }
     return body;
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('The push server did not respond');
@@ -140,11 +146,34 @@ export async function subscribe({ reminders, days, waterGoalGlasses }) {
   return saved.id;
 }
 
-/** Push the current schedule and suppression flags to the server. */
+/**
+ * Push the current schedule and suppression flags to the server.
+ *
+ * Returns the subscription id, which may differ from the one passed in: if the
+ * server no longer recognises this device, it re-registers automatically.
+ *
+ * That matters because free hosting tiers generally have no persistent disk,
+ * so the server's database is wiped on every restart. Without this, reminders
+ * would stop dead and you would have no way of knowing why — the app would
+ * happily believe it was still subscribed. Self-healing makes an ephemeral
+ * store a survivable trade rather than a silent failure.
+ */
 export async function syncPrefs(id, { reminders, days, waterGoalGlasses }) {
-  if (!id) return null;
   const prefs = prefsFrom({ reminders, days, waterGoalGlasses });
-  return api(`/api/subscribe/${id}`, { method: 'PATCH', body: JSON.stringify(prefs) });
+
+  if (id) {
+    try {
+      await api(`/api/subscribe/${id}`, { method: 'PATCH', body: JSON.stringify(prefs) });
+      return id;
+    } catch (err) {
+      // 404 means the server has forgotten this device. Anything else is
+      // transient — offline, restarting, rate-limited — and re-subscribing
+      // would not help.
+      if (err.status !== 404) throw err;
+    }
+  }
+
+  return subscribe({ reminders, days, waterGoalGlasses });
 }
 
 export async function sendTestPush(id) {
