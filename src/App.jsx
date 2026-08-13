@@ -62,7 +62,7 @@ export default function App() {
         {/* ── Sidebar (desktop) ── */}
         <aside className="hidden lg:flex flex-col w-56 shrink-0 sticky top-0 h-dvh py-6">
           <div className="flex items-center gap-2.5 px-2 mb-8">
-            <div className="size-9 rounded-xl grid place-items-center bg-gradient-to-br from-brand-300 to-brand-600 text-[#04120c] shadow-[0_6px_18px_-6px_rgb(16_185_129/0.7)]">
+            <div className="size-9 rounded-xl grid place-items-center metal ">
               <Icon name="leaf" className="size-5" />
             </div>
             <span className="text-[15px] font-semibold tracking-tight">NutriTrack</span>
@@ -93,7 +93,7 @@ export default function App() {
           {/* Mobile header */}
           <header className="lg:hidden flex items-center justify-between mb-5">
             <div className="flex items-center gap-2.5">
-              <div className="size-9 rounded-xl grid place-items-center bg-gradient-to-br from-brand-300 to-brand-600 text-[#04120c]">
+              <div className="size-9 rounded-xl grid place-items-center metal">
                 <Icon name="leaf" className="size-5" />
               </div>
               <span className="text-[15px] font-semibold tracking-tight">NutriTrack</span>
@@ -167,7 +167,7 @@ function SidebarSummary({ date }) {
         <span className="text-[12px] font-normal text-faint ml-1">/ {Math.round(n.plan.target)}</span>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden mt-2.5" style={{ background: 'var(--border)' }}>
-        <div className="h-full rounded-full bg-gradient-to-r from-brand-300 to-brand-500"
+        <div className="h-full rounded-full metal"
              style={{ width: `${pct}%`, transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)' }} />
       </div>
       <div className="grid grid-cols-3 gap-1.5 mt-3 text-center">

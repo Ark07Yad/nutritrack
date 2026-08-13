@@ -5,7 +5,7 @@ import { nutrientsFor, FOOD_CATEGORIES, NUTRIENT_KEYS } from '../data/foods';
 import { RECIPES, MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
-  Badge, Bar, Button, Card, Chip, Empty, Field, Icon, IconButton, Input,
+  Badge, Bar, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput,
   SectionTitle, Segmented, Sheet, Stepper, fmt,
 } from './ui';
 
@@ -594,17 +594,18 @@ function BuildTab({ slot, date, toast, onClose }) {
 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <Field label="Portion size" suffix="g">
-              <Input type="number" value={manual.grams} onChange={(e) => setManual({ ...manual, grams: e.target.value })} />
+              <NumberInput value={manual.grams} min={1} max={5000} fallback={100} onChange={(grams) => setManual({ ...manual, grams })} />
             </Field>
             <Field label="Calories in that portion" suffix="kcal">
-              <Input type="number" placeholder="0" value={manual.kcal} onChange={(e) => setManual({ ...manual, kcal: e.target.value })} />
+              <NumberInput placeholder="0" value={manual.kcal} allowEmpty min={0} max={10000} onChange={(kcal) => setManual({ ...manual, kcal })} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[['protein', 'Protein'], ['carbs', 'Carbs'], ['fat', 'Fat'], ['fiber', 'Fibre']].map(([k, l]) => (
               <Field key={k} label={l} suffix="g">
-                <Input type="number" placeholder="0" value={manual[k]} onChange={(e) => setManual({ ...manual, [k]: e.target.value })} />
+                <NumberInput placeholder="0" value={manual[k]} allowEmpty min={0} max={2000} decimals={1}
+                             onChange={(v) => setManual({ ...manual, [k]: v })} />
               </Field>
             ))}
           </div>

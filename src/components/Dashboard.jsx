@@ -4,7 +4,7 @@ import { useNutrition } from '../lib/useNutrition';
 import { MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, shortDay, isToday } from '../lib/calc';
 import { analyze } from '../lib/coach';
-import { Bar, Button, Card, Icon, Ring, SectionTitle, Stat, Badge, fmt } from './ui';
+import { Bar, Button, Card, Icon, NumberInput, Ring, SectionTitle, Stat, Badge, fmt } from './ui';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 
 export default function Dashboard({ date, onNavigate }) {
@@ -107,7 +107,7 @@ export default function Dashboard({ date, onNavigate }) {
                 </div>
                 <div className="h-1 rounded-full mt-2.5 overflow-hidden" style={{ background: 'var(--border)' }}>
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-brand-300 to-brand-500"
+                    className="h-full rounded-full metal"
                     style={{ width: `${Math.min(100, (kcal / budget) * 100)}%`, transition: 'width 600ms cubic-bezier(0.22,1,0.36,1)' }}
                   />
                 </div>
@@ -269,14 +269,13 @@ function WeightCard({ day, date, profile, dispatch, plan }) {
         <Icon name="scale" className="size-3.5" /> Weight
       </div>
       <div className="flex items-baseline gap-1">
-        <input
-          type="number" step="0.1"
-          value={logged ?? ''}
+        <NumberInput
+          unstyled
+          value={logged}
+          allowEmpty
+          min={20} max={400} decimals={1}
           placeholder={String(profile.weight)}
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            if (v > 20 && v < 400) dispatch({ type: 'logWeight', date, weight: v });
-          }}
+          onChange={(v) => { if (v !== null) dispatch({ type: 'logWeight', date, weight: v }); }}
           className="w-16 bg-transparent outline-none text-[22px] font-semibold tabular leading-none
                      border-b border-transparent focus:border-brand-400/50 transition-colors"
         />

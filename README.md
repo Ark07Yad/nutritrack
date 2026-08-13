@@ -1,5 +1,11 @@
 # NutriTrack
 
+**→ [Open the app](https://nutritrack.ark07yad.workers.dev)** · [push API](https://nutritrack-push.ark07yad.workers.dev/health)
+
+Runs entirely on Cloudflare's free tier. No account, no sign-up — your log
+lives on your device.
+
+
 A calorie, micronutrient and training tracker. It works out what you should be
 eating, tracks what you actually ate down to all 27 vitamins and minerals, logs
 your workouts, and has a coach that reads your real data rather than handing you

@@ -83,7 +83,7 @@ export function SectionTitle({ icon, children, action }) {
 
 const VARIANTS = {
   primary:
-    'text-[#04120c] bg-gradient-to-br from-brand-300 to-brand-500 hover:brightness-110 shadow-[0_6px_20px_-6px_rgb(16_185_129/0.6)] font-semibold',
+    'metal hover:brightness-[1.08] font-semibold',
   ghost:
     'surface hover:[background:var(--surface-hover)] text-[color:var(--text)]',
   subtle:
@@ -146,6 +146,91 @@ const inputBase =
   'focus:border-brand-400/60 focus:ring-4 focus:ring-brand-400/10 placeholder:text-[color:var(--text-faint)]';
 
 export const Input = ({ className = '', ...rest }) => <input className={`${inputBase} ${className}`} {...rest} />;
+
+/**
+ * A numeric field that behaves the way people expect.
+ *
+ * The obvious implementation — `value={number}` with `onChange={Number(...)}`
+ * — is subtly broken: clearing the box produces `Number('') === 0`, React
+ * re-renders it as "0", and typing 85 leaves you staring at "085". You also
+ * cannot ever have an empty field, so correcting a value means selecting the
+ * text first.
+ *
+ * The fix is to keep a *string* draft for as long as the field has focus, so
+ * "", "-", "8" and "8." are all legal intermediate states, and only reconcile
+ * to a number on blur. The parent still gets live updates for every keystroke
+ * that parses, so dependent numbers keep moving as you type.
+ *
+ * Uses `inputMode="decimal"` rather than `type="number"`, which additionally
+ * kills the leading-zero problem at the source and still brings up a numeric
+ * keypad on mobile.
+ */
+export function NumberInput({
+  value,
+  onChange,
+  min = -Infinity,
+  max = Infinity,
+  fallback = 0,
+  decimals = null,
+  allowEmpty = false,
+  unstyled = false,
+  className = '',
+  ...rest
+}) {
+  const [draft, setDraft] = useState(null); // null → not editing, mirror `value`
+
+  const shown =
+    draft !== null ? draft : value === null || value === undefined || value === '' ? '' : String(value);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    // Accept anything on the way to a number, including partial input.
+    if (raw !== '' && raw !== '-' && !/^-?\d*\.?\d*$/.test(raw)) return;
+
+    setDraft(raw);
+
+    if (raw === '' || raw === '-' || raw.endsWith('.')) {
+      // Not yet a number. Hold the parent's last good value rather than
+      // pushing 0, which is what caused the "085" behaviour.
+      if (raw === '' && allowEmpty) onChange(null);
+      return;
+    }
+    const n = Number(raw);
+    if (!Number.isNaN(n)) onChange(n);
+  };
+
+  const handleBlur = () => {
+    if (draft === null) return;
+
+    if (draft === '' || draft === '-') {
+      onChange(allowEmpty ? null : fallback);
+      setDraft(null);
+      return;
+    }
+
+    let n = Number(draft);
+    if (Number.isNaN(n)) n = fallback;
+    n = Math.min(max, Math.max(min, n));
+    if (decimals !== null) n = Number(n.toFixed(decimals));
+
+    onChange(n);
+    setDraft(null); // fall back to mirroring `value`, which strips "007" → "7"
+  };
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      autoComplete="off"
+      value={shown}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onFocus={(e) => e.target.select()}
+      className={unstyled ? className : `${inputBase} ${className}`}
+      {...rest}
+    />
+  );
+}
 export const Textarea = ({ className = '', ...rest }) => <textarea className={`${inputBase} resize-none ${className}`} {...rest} />;
 
 export function Select({ className = '', children, ...rest }) {
@@ -170,7 +255,7 @@ export function Segmented({ options, value, onChange, className = '' }) {
             onClick={() => onChange(o.value)}
             className={`relative px-3.5 py-1.5 rounded-xl text-[13px] font-medium transition-all duration-200 whitespace-nowrap
                         ${active
-                          ? 'text-[#04120c] bg-gradient-to-br from-brand-300 to-brand-500 shadow-[0_4px_14px_-4px_rgb(16_185_129/0.55)]'
+                          ? 'metal '
                           : 'text-dim hover:text-[color:var(--text)]'}`}
           >
             {o.icon && <span className="mr-1">{o.icon}</span>}
@@ -200,10 +285,11 @@ export function Stepper({ value, onChange, step = 5, min = 0, max = 5000, unit =
   return (
     <div className="inline-flex items-center gap-1 surface rounded-2xl p-1">
       <IconButton name="minus" label="Decrease" onClick={() => onChange(Math.max(min, value - step))} className="size-8" />
-      <input
-        type="number"
+      <NumberInput
+        unstyled
         value={Math.round(value)}
-        onChange={(e) => onChange(Math.min(max, Math.max(min, Number(e.target.value) || 0)))}
+        min={min} max={max} fallback={min}
+        onChange={onChange}
         className="w-14 text-center bg-transparent outline-none text-sm font-semibold tabular"
       />
       <span className="text-[11px] text-faint pr-1">{unit}</span>
@@ -237,7 +323,11 @@ export function Ring({ value, max, size = 200, stroke = 14, children, over = fal
             {over ? (
               <><stop offset="0%" stopColor="#fb923c" /><stop offset="100%" stopColor="#f43f5e" /></>
             ) : (
-              <><stop offset="0%" stopColor="#6ee7b7" /><stop offset="55%" stopColor="#34d399" /><stop offset="100%" stopColor="#38bdf8" /></>
+              <>
+                <stop offset="0%" stopColor="var(--ring-a)" />
+                <stop offset="55%" stopColor="var(--ring-b)" />
+                <stop offset="100%" stopColor="var(--ring-c)" />
+              </>
             )}
           </linearGradient>
         </defs>

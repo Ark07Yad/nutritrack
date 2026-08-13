@@ -8,13 +8,19 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50:  #ecfdf5;
-  --color-brand-200: #a7f3d0;
-  --color-brand-300: #6ee7b7;
-  --color-brand-400: #34d399;
-  --color-brand-500: #10b981;
-  --color-brand-600: #059669;
-  --color-brand-700: #047857;
+  /* Jade — a deeper, more saturated green than the stock emerald ramp. The
+     mid-tones are pushed toward blue-green so the metal gradients below read
+     as polished rather than minty. */
+  --color-brand-50:  #e6fff5;
+  --color-brand-100: #b8fde2;
+  --color-brand-200: #7df5c8;
+  --color-brand-300: #3fe8ab;
+  --color-brand-400: #14d391;
+  --color-brand-500: #00b377;
+  --color-brand-600: #009063;
+  --color-brand-700: #00714f;
+  --color-brand-800: #005c42;
+  --color-brand-900: #00301f;
 
   --color-iris-400: #818cf8;
   --color-iris-500: #6366f1;
@@ -57,22 +63,39 @@
 
 :root,
 :root[data-theme='dark'] {
-  --bg:            #07090d;
-  --bg-elev:       #0d1117;
-  --surface:       rgb(255 255 255 / 0.045);
-  --surface-hover: rgb(255 255 255 / 0.075);
-  --border:        rgb(255 255 255 / 0.09);
-  --border-strong: rgb(255 255 255 / 0.16);
-  --text:          #f2f5f9;
-  --text-dim:      #98a3b3;
-  --text-faint:    #626d7d;
-  --shadow-card:   0 1px 2px rgb(0 0 0 / 0.4), 0 12px 32px -12px rgb(0 0 0 / 0.7);
-  --glow-a:        rgb(16 185 129 / 0.16);
-  --glow-b:        rgb(99 102 241 / 0.14);
+  /* Green-black rather than neutral charcoal: every surface carries a little
+     of the brand hue, which is what makes the accent read as metal set into
+     the page rather than a bright sticker on top of grey. */
+  --bg:            #03100b;
+  --bg-elev:       #06180f;
+  --surface:       rgb(120 255 205 / 0.055);
+  --surface-hover: rgb(120 255 205 / 0.095);
+  --border:        rgb(130 255 205 / 0.12);
+  --border-strong: rgb(130 255 205 / 0.22);
+  --text:          #eafff5;
+  --text-dim:      #8fb3a4;
+  --text-faint:    #5c7d6e;
+  --shadow-card:   0 1px 2px rgb(0 0 0 / 0.5), 0 14px 36px -14px rgb(0 20 12 / 0.85);
+  --glow-a:        rgb(0 200 130 / 0.20);
+  --glow-b:        rgb(0 130 110 / 0.16);
+
+  /* Brushed metal. The non-monotonic stops are the whole trick — a flat
+     two-stop gradient reads as plastic, while a light band at 34% followed by
+     a darker 62% reads as a specular highlight rolling across a curved
+     surface. */
+  --metal:      linear-gradient(145deg, #5cf0b8 0%, #14d391 34%, #00996a 62%, #16c88c 100%);
+  --metal-edge: linear-gradient(145deg, rgb(160 255 220 / 0.5), rgb(0 100 70 / 0.35));
+  --metal-text: #02160e;
+  --grad-text:  linear-gradient(100deg, #b8fde2, #3fe8ab 45%, #14d391);
+  /* Progress-ring stops. Kept as separate tokens because an SVG gradient
+     cannot read a CSS gradient. */
+  --ring-a: #5cf0b8;
+  --ring-b: #14d391;
+  --ring-c: #00a97a;
 
   /* Semantic accent text. Light mode needs far darker values to stay legible
      on a pale background, so every accent colour is routed through these. */
-  --tone-good:  #6ee7b7;
+  --tone-good:  #3fe8ab;
   --tone-warn:  #fbbf24;
   --tone-bad:   #fb7185;
   --tone-info:  #38bdf8;
@@ -83,20 +106,33 @@
 }
 
 :root[data-theme='light'] {
-  --bg:            #f6f7fb;
+  /* Bright mode is a warm off-white with the same green cast, so switching
+     themes changes the light in the room rather than the brand. */
+  --bg:            #eef5f0;
   --bg-elev:       #ffffff;
-  --surface:       rgb(255 255 255 / 0.85);
+  --surface:       rgb(255 255 255 / 0.9);
   --surface-hover: #ffffff;
-  --border:        rgb(15 23 42 / 0.08);
-  --border-strong: rgb(15 23 42 / 0.16);
-  --text:          #0b1220;
-  --text-dim:      #5a6678;
-  --text-faint:    #8b96a6;
-  --shadow-card:   0 1px 2px rgb(15 23 42 / 0.05), 0 12px 28px -14px rgb(15 23 42 / 0.22);
-  --glow-a:        rgb(16 185 129 / 0.14);
-  --glow-b:        rgb(99 102 241 / 0.10);
+  --border:        rgb(4 60 40 / 0.13);
+  --border-strong: rgb(4 60 40 / 0.24);
+  --text:          #04211a;
+  --text-dim:      #41695a;
+  --text-faint:    #6e9184;
+  --shadow-card:   0 1px 2px rgb(4 60 40 / 0.06), 0 14px 30px -16px rgb(4 60 40 / 0.3);
+  --glow-a:        rgb(0 179 119 / 0.16);
+  --glow-b:        rgb(0 140 110 / 0.10);
 
-  --tone-good:  #047857;
+  /* Darker metal on white — the dark-mode gradient would vanish against a
+     pale page and drag the contrast ratio under 3:1. */
+  --metal:      linear-gradient(145deg, #14d391 0%, #00b377 34%, #00714f 62%, #009063 100%);
+  --metal-edge: linear-gradient(145deg, rgb(255 255 255 / 0.45), rgb(0 80 55 / 0.3));
+  --metal-text: #ffffff;
+  --grad-text:  linear-gradient(100deg, #00b377, #00714f 55%, #005c42);
+  /* Mint on white reads as grey — the ring needs real saturation here. */
+  --ring-a: #00c98a;
+  --ring-b: #00a06e;
+  --ring-c: #00714f;
+
+  --tone-good:  #00714f;
   --tone-warn:  #b45309;
   --tone-bad:   #be123c;
   --tone-info:  #0369a1;
@@ -129,11 +165,11 @@ body::before {
   background:
     radial-gradient(46rem 34rem at 12% 4%,  var(--glow-a), transparent 65%),
     radial-gradient(40rem 32rem at 92% 12%, var(--glow-b), transparent 62%),
-    radial-gradient(34rem 28rem at 55% 96%, rgb(56 189 248 / 0.10), transparent 65%);
+    radial-gradient(34rem 28rem at 55% 96%, rgb(20 211 145 / 0.10), transparent 65%);
   animation: float-slow 22s ease-in-out infinite;
 }
 
-::selection { background: rgb(16 185 129 / 0.28); }
+::selection { background: rgb(20 211 145 / 0.3); color: var(--text); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Utilities
@@ -158,8 +194,24 @@ body::before {
 @utility text-iris  { color: var(--tone-iris); }
 @utility text-flame { color: var(--tone-flame); }
 
+/* Brushed-metal fill for primary actions and brand marks. */
+@utility metal {
+  background: var(--metal);
+  color: var(--metal-text);
+  border: 1px solid transparent;
+  background-origin: border-box;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.28),
+    inset 0 -1px 0 rgb(0 0 0 / 0.18),
+    0 6px 20px -8px rgb(0 179 119 / 0.55);
+}
+
+@utility metal-ring {
+  background: var(--metal-edge);
+}
+
 @utility gradient-text {
-  background: linear-gradient(100deg, var(--color-brand-300), var(--color-sky-glow) 55%, var(--color-iris-400));
+  background: var(--grad-text);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -198,9 +250,9 @@ body::before {
     width: 20px;
     margin-top: -7px;
     border-radius: 99px;
-    background: linear-gradient(140deg, var(--color-brand-300), var(--color-brand-500));
+    background: var(--metal);
     border: 2px solid var(--bg);
-    box-shadow: 0 0 0 1px var(--border-strong), 0 4px 12px rgb(16 185 129 / 0.4);
+    box-shadow: 0 0 0 1px var(--border-strong), 0 4px 12px rgb(0 179 119 / 0.45);
     transition: transform 0.15s ease;
   }
   input[type='range']::-webkit-slider-thumb:active { transform: scale(1.18); }

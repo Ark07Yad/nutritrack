@@ -4,7 +4,7 @@ import { useNutrition } from '../lib/useNutrition';
 import { EXERCISES, EXERCISE_TYPES, WORKOUT_PLANS, burnFor } from '../data/exercises';
 import { prettyDate, shortDay, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
-  Badge, Button, Card, Chip, Empty, Field, Icon, IconButton, Input,
+  Badge, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput,
   SectionTitle, Sheet, Stat,
 } from './ui';
 import { BarChart, Bar as RBar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
@@ -232,7 +232,7 @@ function ExercisePicker({ date, onClose, toast, weight }) {
           </div>
 
           <Field label="Duration" suffix="min">
-            <Input type="number" value={minutes} onChange={(e) => setMinutes(Math.max(1, Number(e.target.value)))} />
+            <NumberInput value={minutes} min={1} max={600} fallback={45} onChange={setMinutes} />
           </Field>
           <input type="range" min="5" max="180" step="5" value={Math.min(180, minutes)}
                  onChange={(e) => setMinutes(Number(e.target.value))} className="w-full mt-3 mb-2" />
@@ -244,9 +244,9 @@ function ExercisePicker({ date, onClose, toast, weight }) {
 
           {sel.type === 'strength' && (
             <div className="grid grid-cols-3 gap-3 mb-5">
-              <Field label="Sets"><Input type="number" placeholder="3" value={sets} onChange={(e) => setSets(e.target.value)} /></Field>
+              <Field label="Sets"><NumberInput placeholder="3" value={sets} allowEmpty min={1} max={50} onChange={setSets} /></Field>
               <Field label="Reps"><Input placeholder={sel.reps || '10'} value={reps} onChange={(e) => setReps(e.target.value)} /></Field>
-              <Field label="Load" suffix="kg"><Input type="number" placeholder="—" value={load} onChange={(e) => setLoad(e.target.value)} /></Field>
+              <Field label="Load" suffix="kg"><NumberInput placeholder="—" value={load} allowEmpty min={0} max={1000} decimals={1} onChange={setLoad} /></Field>
             </div>
           )}
 

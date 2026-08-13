@@ -264,8 +264,24 @@ export function StoreProvider({ children }) {
     };
   }, []);
 
+  /**
+   * Theme. 'system' follows the OS and keeps following it — the media query
+   * listener matters, because otherwise switching your Mac to dark at sunset
+   * would leave the app bright until a reload.
+   */
   useEffect(() => {
-    document.documentElement.dataset.theme = state.theme;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const resolved = state.theme === 'system' ? (mq.matches ? 'dark' : 'light') : state.theme;
+      document.documentElement.dataset.theme = resolved;
+      // Keep the mobile browser chrome in step with the page.
+      document.querySelector('meta[name="theme-color"]')
+        ?.setAttribute('content', resolved === 'dark' ? '#03100b' : '#eef5f0');
+    };
+    apply();
+    if (state.theme !== 'system') return;
+    mq.addEventListener('change', apply);
+    return () => mq.removeEventListener('change', apply);
   }, [state.theme]);
 
   /* ── Reminders ── */

@@ -13,7 +13,7 @@ import {
   pushServerConfigured, pushServerUrl, pushSupported,
 } from '../lib/push';
 import {
-  Badge, Button, Card, Field, Icon, Input, Segmented, Select,
+  Badge, Button, Card, Field, Icon, Input, NumberInput, Segmented, Select,
   SectionTitle, Sheet, Stat,
 } from './ui';
 
@@ -62,7 +62,7 @@ export default function Profile({ toast }) {
       <Card className="p-5 sm:p-6" glow>
         <div className="flex items-center gap-4 mb-5">
           <div className="size-14 rounded-2xl grid place-items-center text-xl font-semibold
-                          bg-gradient-to-br from-brand-300 to-brand-600 text-[#04120c] shrink-0">
+                          metal shrink-0">
             {(p.name || 'You').slice(0, 1).toUpperCase()}
           </div>
           <div className="min-w-0">
@@ -117,41 +117,38 @@ export default function Profile({ toast }) {
               </Select>
             </Field>
             <Field label="Age" suffix="yrs">
-              <Input type="number" value={p.age} onChange={(e) => set({ age: Number(e.target.value) })} />
+              <NumberInput value={p.age} min={13} max={100} fallback={25} onChange={(age) => set({ age })} />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Weight" suffix={imperial ? 'lb' : 'kg'}>
-              <Input
-                type="number" step="0.1"
+              <NumberInput
                 value={imperial ? Math.round(p.weight * 2.20462) : p.weight}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  set({ weight: imperial ? +(v / 2.20462).toFixed(1) : v });
-                }}
+                min={20} max={600} decimals={1} fallback={imperial ? 154 : 70}
+                onChange={(v) => set({ weight: imperial ? +(v / 2.20462).toFixed(1) : v })}
               />
             </Field>
             {imperial ? (
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Height" suffix="ft">
-                  <Input type="number" value={ft} onChange={(e) => set({ height: feetToCm(Number(e.target.value), inch) })} />
+                  <NumberInput value={ft} min={3} max={8} fallback={5} onChange={(v) => set({ height: feetToCm(v, inch) })} />
                 </Field>
                 <Field label="&nbsp;" suffix="in">
-                  <Input type="number" value={inch} onChange={(e) => set({ height: feetToCm(ft, Number(e.target.value)) })} />
+                  <NumberInput value={inch} min={0} max={11} fallback={0} onChange={(v) => set({ height: feetToCm(ft, v) })} />
                 </Field>
               </div>
             ) : (
               <Field label="Height" suffix="cm">
-                <Input type="number" value={p.height} onChange={(e) => set({ height: Number(e.target.value) })} />
+                <NumberInput value={p.height} min={100} max={250} fallback={175} onChange={(height) => set({ height })} />
               </Field>
             )}
           </div>
 
           <Field label="Body fat %" hint={`Optional. Estimated at ${n.body.bodyFat.toFixed(0)}% from your BMI, age and sex. Entering a measured value switches to the more accurate Katch-McArdle formula.`} suffix="%">
-            <Input type="number" placeholder={n.body.bodyFat.toFixed(0)}
-                   value={p.bodyFat ?? ''}
-                   onChange={(e) => set({ bodyFat: e.target.value === '' ? null : Number(e.target.value) })} />
+            <NumberInput placeholder={n.body.bodyFat.toFixed(0)}
+                         value={p.bodyFat} allowEmpty min={3} max={70} decimals={1}
+                         onChange={(bodyFat) => set({ bodyFat })} />
           </Field>
 
           {p.gender === 'female' && (
@@ -186,10 +183,10 @@ export default function Profile({ toast }) {
         {(p.goal === 'lose' || p.goal === 'gain') && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             <Field label="Target weight" suffix="kg" hint={`Healthy range ${n.body.range.min.toFixed(0)}–${n.body.range.max.toFixed(0)} kg`}>
-              <Input type="number" step="0.5" value={p.targetWeight} onChange={(e) => set({ targetWeight: Number(e.target.value) })} />
+              <NumberInput value={p.targetWeight} min={20} max={600} decimals={1} fallback={p.weight} onChange={(targetWeight) => set({ targetWeight })} />
             </Field>
             <Field label="Timeframe" suffix="wks" hint={n.plan.eta ? `Reaches target ${n.plan.eta.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}>
-              <Input type="number" value={p.weeks} onChange={(e) => set({ weeks: Math.max(1, Number(e.target.value)) })} />
+              <NumberInput value={p.weeks} min={1} max={260} fallback={12} onChange={(weeks) => set({ weeks })} />
             </Field>
           </div>
         )}
@@ -256,12 +253,19 @@ export default function Profile({ toast }) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-[13.5px] font-medium">Theme</div>
-            <div className="text-[11.5px] text-faint mt-0.5">Both are designed properly — pick whichever you prefer.</div>
+            <div className="text-[11.5px] text-faint mt-0.5">
+              Both themes are designed properly rather than one being an afterthought. Auto follows your device
+              and keeps following it, so it flips with your system at sunset.
+            </div>
           </div>
           <Segmented
             value={state.theme}
             onChange={(theme) => dispatch({ type: 'theme', theme })}
-            options={[{ value: 'dark', label: '🌙' }, { value: 'light', label: '☀️' }]}
+            options={[
+              { value: 'dark', label: '🌙 Dark' },
+              { value: 'light', label: '☀️ Bright' },
+              { value: 'system', label: '⚙️ Auto' },
+            ]}
           />
         </div>
 
@@ -306,7 +310,7 @@ function Toggle({ checked, onChange, label, hint }) {
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`relative w-11 h-6 rounded-full shrink-0 mt-0.5 transition-colors duration-200
-          ${checked ? 'bg-gradient-to-r from-brand-300 to-brand-500' : ''}`}
+          ${checked ? 'metal' : ''}`}
         style={checked ? undefined : { background: 'var(--border-strong)' }}
       >
         <span

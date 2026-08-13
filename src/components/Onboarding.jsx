@@ -4,7 +4,7 @@ import {
   ACTIVITY_LEVELS, GOALS, bmi, bmiCategory, goalPlan, macroTargets,
   healthyWeightRange, cmToFeet, feetToCm, estimateBodyFat,
 } from '../lib/calc';
-import { Button, Card, Field, Icon, Input, Select, Segmented } from './ui';
+import { Button, Card, Field, Icon, Input, NumberInput, Select, Segmented } from './ui';
 
 const STEPS = ['You', 'Body', 'Activity', 'Goal', 'Diet', 'Plan'];
 
@@ -39,7 +39,7 @@ export default function Onboarding() {
       <div className="w-full max-w-lg">
         {/* Brand */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="size-11 rounded-2xl grid place-items-center bg-gradient-to-br from-brand-300 to-brand-600 text-[#04120c] shadow-[0_8px_24px_-8px_rgb(16_185_129/0.7)]">
+          <div className="size-11 rounded-2xl grid place-items-center metal ">
             <Icon name="leaf" className="size-6" />
           </div>
           <div>
@@ -186,16 +186,13 @@ function StepBody({ p, set, bmiValue, range }) {
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Age" suffix="yrs">
-          <Input type="number" value={p.age} onChange={(e) => set({ age: Number(e.target.value) })} />
+          <NumberInput value={p.age} min={13} max={100} fallback={25} onChange={(age) => set({ age })} />
         </Field>
         <Field label={imperial ? 'Weight' : 'Weight'} suffix={imperial ? 'lb' : 'kg'}>
-          <Input
-            type="number" step="0.1"
+          <NumberInput
             value={imperial ? Math.round(p.weight * 2.20462) : p.weight}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              set({ weight: imperial ? +(v / 2.20462).toFixed(1) : v });
-            }}
+            min={20} max={600} decimals={1} fallback={imperial ? 154 : 70}
+            onChange={(v) => set({ weight: imperial ? +(v / 2.20462).toFixed(1) : v })}
           />
         </Field>
       </div>
@@ -204,24 +201,24 @@ function StepBody({ p, set, bmiValue, range }) {
         {imperial ? (
           <div className="grid grid-cols-2 gap-3">
             <Field label="Height" suffix="ft">
-              <Input type="number" value={ft} onChange={(e) => set({ height: feetToCm(Number(e.target.value), inch) })} />
+              <NumberInput value={ft} min={3} max={8} fallback={5} onChange={(v) => set({ height: feetToCm(v, inch) })} />
             </Field>
             <Field label="&nbsp;" suffix="in">
-              <Input type="number" value={inch} onChange={(e) => set({ height: feetToCm(ft, Number(e.target.value)) })} />
+              <NumberInput value={inch} min={0} max={11} fallback={0} onChange={(v) => set({ height: feetToCm(ft, v) })} />
             </Field>
           </div>
         ) : (
           <Field label="Height" suffix="cm">
-            <Input type="number" value={p.height} onChange={(e) => set({ height: Number(e.target.value) })} />
+            <NumberInput value={p.height} min={100} max={250} fallback={175} onChange={(height) => set({ height })} />
           </Field>
         )}
       </div>
 
       <Field label="Body fat %" hint="Optional. If you know it, we use the more accurate Katch-McArdle equation instead." className="mt-3" suffix="%">
-        <Input
-          type="number" placeholder={`≈ ${estimateBodyFat(p).toFixed(0)} (estimated)`}
-          value={p.bodyFat ?? ''}
-          onChange={(e) => set({ bodyFat: e.target.value === '' ? null : Number(e.target.value) })}
+        <NumberInput
+          placeholder={`≈ ${estimateBodyFat(p).toFixed(0)} (estimated)`}
+          value={p.bodyFat} allowEmpty min={3} max={70} decimals={1}
+          onChange={(bodyFat) => set({ bodyFat })}
         />
       </Field>
 
@@ -316,10 +313,10 @@ function StepGoal({ p, set, plan, range }) {
         <div className="animate-rise">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Target weight" suffix="kg" hint={`Healthy range: ${range.min.toFixed(0)}–${range.max.toFixed(0)} kg`}>
-              <Input type="number" step="0.5" value={p.targetWeight} onChange={(e) => set({ targetWeight: Number(e.target.value) })} />
+              <NumberInput value={p.targetWeight} min={20} max={600} decimals={1} fallback={p.weight} onChange={(targetWeight) => set({ targetWeight })} />
             </Field>
             <Field label="In how many weeks?" suffix="wks" hint={`≈ ${(p.weeks / 4.345).toFixed(1)} months`}>
-              <Input type="number" value={p.weeks} onChange={(e) => set({ weeks: Math.max(1, Number(e.target.value)) })} />
+              <NumberInput value={p.weeks} min={1} max={260} fallback={12} onChange={(weeks) => set({ weeks })} />
             </Field>
           </div>
 

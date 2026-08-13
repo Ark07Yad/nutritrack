@@ -51,7 +51,7 @@ export default function Coach({ date, onNavigate }) {
     <div className="space-y-5 pb-4">
       <Card className="p-5 sm:p-6" glow>
         <div className="flex items-start gap-4">
-          <div className="size-11 rounded-2xl grid place-items-center bg-gradient-to-br from-brand-300 to-brand-600 text-[#04120c] shrink-0 shadow-[0_8px_24px_-8px_rgb(16_185_129/0.7)]">
+          <div className="size-11 rounded-2xl grid place-items-center metal shrink-0 ">
             <Icon name="spark" className="size-5.5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -120,7 +120,7 @@ export default function Coach({ date, onNavigate }) {
               m.role === 'user' ? (
                 <div key={i} className="flex justify-end animate-rise">
                   <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md text-[13.5px]
-                                  bg-gradient-to-br from-brand-400 to-brand-600 text-[#04120c] font-medium">
+                                  metal font-medium">
                     {m.text}
                   </div>
                 </div>
