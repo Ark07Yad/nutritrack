@@ -129,6 +129,35 @@ const RAW = [
     [['Salmon (baked)', 150], ['Quinoa (cooked)', 150], ['Spinach / palak (raw)', 60], ['Olive oil (extra virgin)', 7]]],
   ['Egg curry with rice', 'dinner', 'egg', 'Cheap protein that still feels like a proper meal',
     [['Egg, whole (boiled)', 150], ['White rice (cooked)', 150], ['Mixed veg sabzi', 120]]],
+
+  /* ───────────────────────────── EATING OUT ─────────────────────────────
+     Ordinary combos, logged in one tap. The point is not to recommend these
+     — it is that a day you do not log is worse than a day you log honestly,
+     and nobody itemises a burger meal into five separate searches. */
+  ['Burger, fries & cola', 'lunch', 'vegetarian', 'The standard combo. Logged honestly it is easier to plan the rest of the day around',
+    [['Veg burger (aloo tikki style)', 155], ['French fries', 117], ['Cola (regular)', 330]]],
+  ['Chicken burger meal', 'lunch', 'nonveg', 'Swap the cola for diet and this drops by 140 kcal at no cost to the meal',
+    [['Chicken burger (crispy)', 170], ['French fries', 117], ['Diet cola (zero sugar)', 330]]],
+  ['Two slices of pizza', 'dinner', 'vegetarian', 'Two slices and a salad lands far better than four slices alone',
+    [['Pizza, cheese (regular crust)', 214], ['Mixed salad (leafy + tomato + cucumber)', 120]]],
+  ['Pizza night (chicken)', 'dinner', 'nonveg', 'Three slices with garlic bread — a genuinely big evening, worth seeing the number for',
+    [['Pizza, chicken / pepperoni', 330], ['Garlic bread with cheese', 90]]],
+  ['Street food evening', 'snack', 'vegan', 'Pani puri, bhel and a vada pav — the classic evening out',
+    [['Pani puri (6 pieces)', 120], ['Bhel puri', 150], ['Vada pav', 120]]],
+  ['Chole bhature plate', 'lunch', 'vegetarian', 'Heavy by design. Best treated as the whole meal rather than a side',
+    [['Chole bhature', 300], ['Sweet lassi', 300]]],
+  ['Momos & noodles', 'dinner', 'vegan', 'The default order. Steamed rather than fried saves about 120 kcal',
+    [['Momos, steamed veg (6 pieces)', 150], ['Chowmein / hakka noodles', 250]]],
+  ['Fried chicken bucket meal', 'dinner', 'nonveg', 'High protein for what it is — the fries and the drink are where the calories hide',
+    [['Fried chicken (2 pieces)', 130], ['French fries', 117], ['Cola (regular)', 330]]],
+  ['Shake & fries', 'snack', 'vegetarian', 'Around 700 kcal of almost pure liquid and fat. Worth knowing before, not after',
+    [['Oreo / cookie thick shake', 400], ['French fries', 117]]],
+  ['Coffee shop stop', 'snack', 'vegetarian', 'A frappe and a cookie is a meal’s worth of calories that never feels like one',
+    [['Caramel frappe', 350], ['Chocolate chip cookie', 32]]],
+  ['Dessert after dinner', 'snack', 'vegetarian', 'Two scoops fits most days if the rest of the day is planned around it',
+    [['Ice cream, vanilla', 130]]],
+  ['Biryani takeaway', 'lunch', 'nonveg', 'One of the better takeaway options — real protein, and the rice is the only thing to watch',
+    [['Chicken biryani (restaurant)', 300], ['Curd / plain yogurt', 100]]],
 ];
 
 let rid = 0;

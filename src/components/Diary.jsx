@@ -290,7 +290,7 @@ function SearchTab({ slot, date, toast }) {
       <div className="relative mb-3">
         <Icon name="search" className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-faint" />
         <Input
-          autoFocus placeholder="Search 123 foods — dal, paneer, chicken, oats…"
+          autoFocus placeholder={`Search ${foods.length} foods — burger, pizza, shake, dal, paneer…`}
           value={q} onChange={(e) => setQ(e.target.value)} className="pl-10"
         />
       </div>
