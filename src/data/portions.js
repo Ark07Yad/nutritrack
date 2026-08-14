@@ -31,6 +31,31 @@ const DRINK_SIZES = [
   { id: 'large', label: 'large', grams: 500, note: '500 ml' },
 ];
 
+/**
+ * Coffee-shop cup sizes. The names differ by chain (tall/grande/venti,
+ * regular/large) but the volumes barely do, so these are the volumes with
+ * plain-English labels.
+ */
+const COFFEE_CUPS = [
+  { id: 'small', label: 'small', grams: 240, note: '8 oz' },
+  { id: 'medium', label: 'medium', grams: 350, note: '12 oz' },
+  { id: 'large', label: 'large', grams: 470, note: '16 oz' },
+  { id: 'ml', label: 'ml', grams: 1, step: 50 },
+];
+
+const SHOTS = [
+  { id: 'shot', label: 'shot', grams: 30, step: 1 },
+  { id: 'double', label: 'double', grams: 60 },
+  { id: 'ml', label: 'ml', grams: 1, step: 10 },
+];
+
+const CANS = [
+  { id: 'can', label: 'can', grams: 330, note: '330 ml' },
+  { id: 'bottle', label: 'bottle', grams: 500, note: '500 ml' },
+  { id: 'glass', label: 'glass', grams: 300 },
+  { id: 'ml', label: 'ml', grams: 1, step: 50 },
+];
+
 const PIECES = (gramsEach, noun = 'piece') => [
   { id: 'piece', label: noun, grams: gramsEach, step: 1 },
   { id: 'g', label: 'g', grams: 1, step: 10 },
@@ -191,6 +216,77 @@ const BY_NAME = {
     { id: 'g', label: 'g', grams: 1, step: 5 },
   ],
 
+  /* Coffee — espresso-based drinks are sold by cup size, neat shots by shot. */
+  Espresso: SHOTS,
+  Macchiato: [{ id: 'small', label: 'small', grams: 60 }, { id: 'ml', label: 'ml', grams: 1, step: 10 }],
+  Cortado: [{ id: 'cup', label: 'cup', grams: 120 }, { id: 'ml', label: 'ml', grams: 1, step: 20 }],
+  'Flat white': [{ id: 'cup', label: 'cup', grams: 160 }, ...COFFEE_CUPS],
+  Americano: COFFEE_CUPS,
+  'Cold brew (black)': COFFEE_CUPS,
+  Cappuccino: COFFEE_CUPS,
+  Latte: COFFEE_CUPS,
+  'Latte with skimmed milk': COFFEE_CUPS,
+  'Oat milk latte': COFFEE_CUPS,
+  Mocha: COFFEE_CUPS,
+  'Caramel latte': COFFEE_CUPS,
+  'Iced latte': COFFEE_CUPS,
+  'Iced americano': COFFEE_CUPS,
+  'Instant coffee with milk & sugar': [{ id: 'cup', label: 'cup', grams: 200 }, ...COFFEE_CUPS],
+  'Masala chai': [
+    { id: 'cutting', label: 'cutting', grams: 90, note: 'half glass' },
+    { id: 'cup', label: 'cup', grams: 150 },
+    { id: 'ml', label: 'ml', grams: 1, step: 25 },
+  ],
+  'Green tea (no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Black tea (no milk, no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Iced tea (sweetened)': COFFEE_CUPS,
+
+  /* Cold drinks — sold in cans and bottles. */
+  'Lemon-lime soda': CANS,
+  'Orange soda': CANS,
+  'Ginger ale': CANS,
+  'Tonic water': CANS,
+  'Sparkling water (plain)': CANS,
+  Lemonade: CANS,
+  'Nimbu pani (lemon water, sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Fresh lime soda (sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Coconut water': [
+    { id: 'tender', label: 'tender coconut', grams: 300 },
+    { id: 'bottle', label: 'bottle', grams: 500 },
+    { id: 'ml', label: 'ml', grams: 1, step: 50 },
+  ],
+  'Sports drink': [{ id: 'bottle', label: 'bottle', grams: 500 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Sugarcane juice': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Apple juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Mango juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Bottled iced coffee (sweetened)': [{ id: 'bottle', label: 'bottle', grams: 250 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+
+  /* Deli counter — packs, pots and slices. */
+  'Deli sandwich, chicken mayo': PIECES(180, 'pack'),
+  'Deli sandwich, egg mayo': PIECES(180, 'pack'),
+  'Deli sandwich, tuna & sweetcorn': PIECES(180, 'pack'),
+  'Deli sandwich, cheese & pickle': PIECES(180, 'pack'),
+  'Deli wrap, chicken caesar': PIECES(200, 'wrap'),
+  'Falafel & hummus wrap': PIECES(210, 'wrap'),
+  'Pasta salad (mayo)': PIECES(200, 'pot'),
+  'Couscous salad': PIECES(200, 'pot'),
+  'Greek salad pot': PIECES(220, 'pot'),
+  'Chicken tikka pot': PIECES(180, 'pot'),
+  'Paneer tikka pot': PIECES(180, 'pot'),
+  'Mac & cheese pot': PIECES(300, 'pot'),
+  'Quiche lorraine (slice)': PIECES(125, 'slice'),
+  'Sausage roll': PIECES(110, 'roll'),
+  'Scotch egg': PIECES(120, 'egg'),
+  'Sliced cooked ham': [{ id: 'slice', label: 'slice', grams: 20, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  Salami: [{ id: 'slice', label: 'slice', grams: 6, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 5 }],
+  'Marinated olives': [{ id: 'olive', label: 'olive', grams: 4, step: 1 }, { id: 'portion', label: 'portion', grams: 40 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  'Sushi, salmon maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 25, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 150 }],
+  'Sushi, veg maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 23, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 140 }],
+  'Rotisserie chicken, breast (no skin)': PIECES(120, 'portion'),
+  'Rotisserie chicken, thigh (with skin)': PIECES(110, 'thigh'),
+  Coleslaw: [{ id: 'portion', label: 'portion', grams: 100 }, { id: 'tbsp', label: 'tbsp', grams: 15, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  'Potato salad': [{ id: 'portion', label: 'portion', grams: 150 }, { id: 'tbsp', label: 'tbsp', grams: 25, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+
   /* Fats, measured in spoons. */
   'Olive oil (extra virgin)': [
     { id: 'tsp', label: 'tsp', grams: 4.5, step: 1 },
@@ -261,6 +357,16 @@ export function portionsFor(food) {
       { id: 'tbsp', label: 'tbsp', grams: 10, step: 1 },
       { id: 'handful', label: 'handful', grams: 28 },
       { id: 'g', label: 'g', grams: 1, step: 5 },
+    ];
+  }
+
+  if (food.category === 'Coffee & Tea') return COFFEE_CUPS;
+
+  if (food.category === 'Deli & Grab-and-go') {
+    return [
+      { id: 'pack', label: 'pack', grams: food.servingGrams || 180 },
+      { id: 'half', label: 'half pack', grams: Math.round((food.servingGrams || 180) / 2) },
+      { id: 'g', label: 'g', grams: 1, step: 10 },
     ];
   }
 
