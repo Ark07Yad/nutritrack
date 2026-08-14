@@ -63,21 +63,28 @@
 
 :root,
 :root[data-theme='dark'] {
-  /* Green-black rather than neutral charcoal: every surface carries a little
-     of the brand hue, which is what makes the accent read as metal set into
-     the page rather than a bright sticker on top of grey. */
-  --bg:            #03100b;
-  --bg-elev:       #06180f;
-  --surface:       rgb(120 255 205 / 0.055);
-  --surface-hover: rgb(120 255 205 / 0.095);
-  --border:        rgb(130 255 205 / 0.12);
-  --border-strong: rgb(130 255 205 / 0.22);
-  --text:          #eafff5;
-  --text-dim:      #8fb3a4;
-  --text-faint:    #5c7d6e;
-  --shadow-card:   0 1px 2px rgb(0 0 0 / 0.5), 0 14px 36px -14px rgb(0 20 12 / 0.85);
-  --glow-a:        rgb(0 200 130 / 0.20);
-  --glow-b:        rgb(0 130 110 / 0.16);
+  /* Neutral charcoal, not green-black.
+
+     The previous version tinted every surface, border and label green, which
+     made the whole app look like one colour. The convention that actually
+     works — Spotify, Linear, Vercel — is a neutral near-black base with white
+     text, and the brand colour spent sparingly on the things you should look
+     at: the primary button, the progress ring, the active nav item. Restraint
+     is what makes an accent read as vivid. */
+  --bg:            #0b0d0c;
+  --bg-elev:       #151817;
+  --surface:       rgb(255 255 255 / 0.05);
+  --surface-hover: rgb(255 255 255 / 0.09);
+  --border:        rgb(255 255 255 / 0.1);
+  --border-strong: rgb(255 255 255 / 0.19);
+  --text:          #ffffff;
+  --text-dim:      #b0b6b3;
+  --text-faint:    #7c8481;
+  --shadow-card:   0 1px 2px rgb(0 0 0 / 0.5), 0 14px 36px -14px rgb(0 0 0 / 0.8);
+  /* Ambient light stays green — a hint of the brand in the room, not on the
+     furniture. */
+  --glow-a:        rgb(0 200 130 / 0.15);
+  --glow-b:        rgb(0 130 110 / 0.10);
 
   /* Brushed metal. The non-monotonic stops are the whole trick — a flat
      two-stop gradient reads as plastic, while a light band at 34% followed by
@@ -86,7 +93,8 @@
   --metal:      linear-gradient(145deg, #5cf0b8 0%, #14d391 34%, #00996a 62%, #16c88c 100%);
   --metal-edge: linear-gradient(145deg, rgb(160 255 220 / 0.5), rgb(0 100 70 / 0.35));
   --metal-text: #02160e;
-  --grad-text:  linear-gradient(100deg, #b8fde2, #3fe8ab 45%, #14d391);
+  /* Headline numbers read as white with a green edge, not as green text. */
+  --grad-text:  linear-gradient(100deg, #ffffff, #d9fff0 40%, #3fe8ab);
   /* Progress-ring stops. Kept as separate tokens because an SVG gradient
      cannot read a CSS gradient. */
   --ring-a: #5cf0b8;
@@ -106,27 +114,28 @@
 }
 
 :root[data-theme='light'] {
-  /* Bright mode is a warm off-white with the same green cast, so switching
-     themes changes the light in the room rather than the brand. */
-  --bg:            #eef5f0;
+  /* Bright mode is genuinely white — near-neutral greys, not a green wash.
+     Same rule as dark: the accent earns its impact by being the only saturated
+     thing on the screen. */
+  --bg:            #f6f7f7;
   --bg-elev:       #ffffff;
-  --surface:       rgb(255 255 255 / 0.9);
-  --surface-hover: #ffffff;
-  --border:        rgb(4 60 40 / 0.13);
-  --border-strong: rgb(4 60 40 / 0.24);
-  --text:          #04211a;
-  --text-dim:      #41695a;
-  --text-faint:    #6e9184;
-  --shadow-card:   0 1px 2px rgb(4 60 40 / 0.06), 0 14px 30px -16px rgb(4 60 40 / 0.3);
-  --glow-a:        rgb(0 179 119 / 0.16);
-  --glow-b:        rgb(0 140 110 / 0.10);
+  --surface:       #ffffff;
+  --surface-hover: #f2f4f3;
+  --border:        rgb(10 20 16 / 0.1);
+  --border-strong: rgb(10 20 16 / 0.2);
+  --text:          #0d100f;
+  --text-dim:      #5b6360;
+  --text-faint:    #868e8b;
+  --shadow-card:   0 1px 2px rgb(10 20 16 / 0.05), 0 12px 28px -16px rgb(10 20 16 / 0.2);
+  --glow-a:        rgb(0 179 119 / 0.10);
+  --glow-b:        rgb(0 140 110 / 0.06);
 
   /* Darker metal on white — the dark-mode gradient would vanish against a
      pale page and drag the contrast ratio under 3:1. */
   --metal:      linear-gradient(145deg, #14d391 0%, #00b377 34%, #00714f 62%, #009063 100%);
   --metal-edge: linear-gradient(145deg, rgb(255 255 255 / 0.45), rgb(0 80 55 / 0.3));
   --metal-text: #ffffff;
-  --grad-text:  linear-gradient(100deg, #00b377, #00714f 55%, #005c42);
+  --grad-text:  linear-gradient(100deg, #0d100f, #0a5c41 55%, #00905f);
   /* Mint on white reads as grey — the ring needs real saturation here. */
   --ring-a: #00c98a;
   --ring-b: #00a06e;
@@ -169,7 +178,7 @@ body::before {
   animation: float-slow 22s ease-in-out infinite;
 }
 
-::selection { background: rgb(20 211 145 / 0.3); color: var(--text); }
+::selection { background: rgb(20 211 145 / 0.25); color: var(--text); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Utilities

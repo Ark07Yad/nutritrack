@@ -458,6 +458,123 @@ export function Sheet({ open, onClose, title, subtitle, children, size = 'md' })
 
 /* ─────────────────────────────────  Misc  ──────────────────────────────── */
 
+/**
+ * Portion picker: pick a unit, then a count.
+ *
+ * Replaces asking for grams, which most people cannot estimate for anything
+ * they did not cook themselves. Grams are still shown so the conversion is
+ * never a black box, and a raw g/ml unit is always available for people who
+ * do weigh their food.
+ */
+export function PortionPicker({ units, unitId, count, onChange }) {
+  const unit = units.find((u) => u.id === unitId) || units[0];
+  const raw = unit.grams === 1;
+  const step = raw ? unit.step || 10 : 1;
+
+  const bump = (delta) => {
+    const next = raw
+      ? Math.max(step, Math.round((count + delta * step) / step) * step)
+      : Math.max(0.5, Math.round((count + delta * 0.5) * 2) / 2); // half units are real: half a pizza slice
+    onChange({ unitId: unit.id, count: next });
+  };
+
+  return (
+    <div className="space-y-3">
+      {units.length > 1 && (
+        <div className="flex gap-1.5 flex-wrap">
+          {units.map((u) => (
+            <button
+              key={u.id}
+              onClick={() => onChange({ unitId: u.id, count: u.grams === 1 ? u.grams * 100 : 1 })}
+              className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-all active:scale-95 border
+                ${u.id === unit.id
+                  ? 'bg-brand-500/15 text-good border-brand-400/40'
+                  : 'border-hair text-dim hover:text-[color:var(--text)] hover:[background:var(--surface-hover)]'}`}
+              style={u.id === unit.id ? undefined : { background: 'var(--surface)' }}
+              title={u.note || ''}
+            >
+              {u.label}
+              {u.note && <span className="ml-1.5 text-[10.5px] text-faint">{u.note}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <div className="inline-flex items-center gap-1 surface rounded-2xl p-1">
+          <IconButton name="minus" label="Less" onClick={() => bump(-1)} className="size-9" />
+          <div className="w-16 text-center">
+            <div className="text-[17px] font-semibold tabular leading-none">
+              {raw ? Math.round(count) : +count.toFixed(2)}
+            </div>
+            <div className="text-[10px] text-faint mt-0.5">{unit.label}</div>
+          </div>
+          <IconButton name="plus" label="More" onClick={() => bump(1)} className="size-9" />
+        </div>
+
+        {!raw && (
+          <div className="flex gap-1.5">
+            {[1, 2, 3].map((c) => (
+              <button
+                key={c}
+                onClick={() => onChange({ unitId: unit.id, count: c })}
+                className={`size-9 rounded-xl text-[13px] font-semibold tabular transition-all active:scale-90 border
+                  ${count === c ? 'bg-brand-500/15 text-good border-brand-400/40' : 'border-hair text-dim'}`}
+                style={count === c ? undefined : { background: 'var(--surface)' }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="text-[12px] text-faint tabular ml-auto">
+          {Math.round(unit.grams * count)} g
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Always-visible theme switch.
+ *
+ * Cycles dark → bright → auto. Buried in a settings page it may as well not
+ * exist; this is the kind of control people flick several times a day
+ * depending on where they are, so it lives in the chrome.
+ */
+export function ThemeToggle({ theme, onChange, compact = false }) {
+  const order = ['dark', 'light', 'system'];
+  const meta = {
+    dark:   { icon: 'moon',     label: 'Dark' },
+    light:  { icon: 'sun',      label: 'Bright' },
+    system: { icon: 'settings', label: 'Auto' },
+  };
+  const next = order[(order.indexOf(theme) + 1) % order.length];
+  const current = meta[theme] || meta.dark;
+
+  return (
+    <button
+      onClick={() => onChange(next)}
+      aria-label={`Theme: ${current.label}. Switch to ${meta[next].label}`}
+      title={`${current.label} — tap for ${meta[next].label}`}
+      className={
+        compact
+          ? 'size-9 rounded-xl grid place-items-center text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)] active:scale-90'
+          : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-[13.5px] font-medium text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)]'
+      }
+    >
+      <Icon name={current.icon} className="size-[18px] shrink-0" />
+      {!compact && (
+        <>
+          <span>{current.label}</span>
+          <span className="ml-auto text-[11px] text-faint">Tap to switch</span>
+        </>
+      )}
+    </button>
+  );
+}
+
 export function Empty({ icon = 'plate', title, body, action }) {
   return (
     <div className="text-center py-10 px-6">

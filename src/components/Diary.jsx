@@ -2,10 +2,11 @@ import { useMemo, useState } from 'react';
 import { useStore, uid, useAllFoods, useAllowedDiets, sumEntries } from '../lib/store';
 import { useNutrition } from '../lib/useNutrition';
 import { nutrientsFor, FOOD_CATEGORIES, NUTRIENT_KEYS } from '../data/foods';
+import { portionsFor, defaultPortion, describePortion } from '../data/portions';
 import { RECIPES, MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
-  Badge, Bar, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput,
+  Badge, Bar, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput, PortionPicker,
   SectionTitle, Segmented, Sheet, Stepper, fmt,
 } from './ui';
 
@@ -129,7 +130,7 @@ function EntryRow({ entry, slot, date, dispatch, toast }) {
         <div className="flex-1 min-w-0">
           <div className="text-[13.5px] font-medium truncate">{entry.name}</div>
           <div className="text-[11.5px] text-faint tabular mt-0.5">
-            {Math.round(entry.grams)} {entry.unit || 'g'}
+            {entry.portionLabel || `${Math.round(entry.grams)} ${entry.unit || 'g'}`}
             <span className="mx-1.5">·</span>
             P {fmt(entry.n.protein)} · C {fmt(entry.n.carbs)} · F {fmt(entry.n.fat)}
           </div>
@@ -189,13 +190,17 @@ function FoodPicker({ slot, date, onClose, toast }) {
 }
 
 /** Turn a food + gram amount into a log entry. */
-function makeEntry(food, grams) {
+function makeEntry(food, grams, portionLabel = null) {
   return {
     id: uid(),
     foodId: food.id,
     name: food.name,
     grams,
     unit: food.unit || 'g',
+    // What the person actually chose — "2 slices", "1 can". Kept alongside
+    // grams so the diary reads back the way it was entered rather than as a
+    // weight nobody typed.
+    portionLabel,
     per100: food.per100,
     n: nutrientsFor(food, grams),
   };
@@ -209,7 +214,12 @@ function SearchTab({ slot, date, toast }) {
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
   const [selected, setSelected] = useState(null);
-  const [grams, setGrams] = useState(100);
+  // Portion state is (unit, count); grams are derived. Storage stays in grams
+  // so nothing downstream had to change.
+  const [portion, setPortion] = useState({ unitId: 'g', count: 100 });
+  const units = useMemo(() => (selected ? portionsFor(selected) : []), [selected]);
+  const activeUnit = units.find((u) => u.id === portion.unitId) || units[0];
+  const grams = activeUnit ? activeUnit.grams * portion.count : 100;
 
   const allowed = useAllowedDiets();
   const results = useMemo(() => {
@@ -227,10 +237,17 @@ function SearchTab({ slot, date, toast }) {
 
   const categories = ['All', ...FOOD_CATEGORIES.filter((c) => foods.some((f) => f.category === c && allowed.includes(f.diet)))];
 
-  const pick = (food) => { setSelected(food); setGrams(food.servingGrams || 100); };
+  const pick = (food) => {
+    setSelected(food);
+    const d = defaultPortion(food);
+    setPortion({ unitId: d.id, count: d.grams === 1 ? 100 : 1 });
+  };
 
   const add = () => {
-    dispatch({ type: 'addEntry', date, slot, entry: makeEntry(selected, grams) });
+    dispatch({
+      type: 'addEntry', date, slot,
+      entry: makeEntry(selected, grams, describePortion(activeUnit, portion.count)),
+    });
     toast(`${selected.name} added`);
     setSelected(null);
     setQ('');
@@ -252,20 +269,14 @@ function SearchTab({ slot, date, toast }) {
           </Badge>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 mb-4">
-          <Stepper value={grams} onChange={setGrams} step={10} min={1} max={2000} />
-          {selected.servingGrams && (
-            <Chip onClick={() => setGrams(selected.servingGrams)}>
-              {selected.servingLabel} ({selected.servingGrams} g)
-            </Chip>
-          )}
-          {[50, 100, 150, 200].map((g) => (
-            <Chip key={g} active={grams === g} onClick={() => setGrams(g)}>{g} g</Chip>
-          ))}
+        <div className="mb-5">
+          <PortionPicker
+            units={units}
+            unitId={portion.unitId}
+            count={portion.count}
+            onChange={setPortion}
+          />
         </div>
-
-        <input type="range" min="5" max="500" step="5" value={Math.min(500, grams)}
-               onChange={(e) => setGrams(Number(e.target.value))} className="w-full mb-5" />
 
         <div className="grid grid-cols-4 gap-2 mb-4">
           {[['kcal', n.kcal, ''], ['Protein', n.protein, 'g'], ['Carbs', n.carbs, 'g'], ['Fat', n.fat, 'g']].map(([l, v, u]) => (

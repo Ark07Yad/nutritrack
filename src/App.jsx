@@ -10,7 +10,7 @@ import Nutrients from './components/Nutrients';
 import Progress from './components/Progress';
 import Coach from './components/Coach';
 import ProfileScreen from './components/Profile';
-import { Icon, NudgeStack, Toast } from './components/ui';
+import { Icon, NudgeStack, ThemeToggle, Toast } from './components/ui';
 
 const NAV = [
   { id: 'home',     label: 'Home',      icon: 'home' },
@@ -85,7 +85,10 @@ export default function App() {
             ))}
           </nav>
 
-          <SidebarSummary date={date} />
+          <div className="mt-auto space-y-2">
+            <ThemeToggle theme={state.theme} onChange={(theme) => dispatch({ type: 'theme', theme })} />
+            <SidebarSummary date={date} />
+          </div>
         </aside>
 
         {/* ── Main ── */}
@@ -99,6 +102,7 @@ export default function App() {
               <span className="text-[15px] font-semibold tracking-tight">NutriTrack</span>
             </div>
             <div className="flex gap-1">
+              <ThemeToggle compact theme={state.theme} onChange={(theme) => dispatch({ type: 'theme', theme })} />
               <HeaderTab active={tab === 'progress'} icon="chart" label="Progress" onClick={() => navigate('progress')} />
               <HeaderTab active={tab === 'profile'} icon="user" label="Profile" onClick={() => navigate('profile')} />
             </div>
@@ -160,7 +164,7 @@ function SidebarSummary({ date }) {
   const pct = Math.min(100, (n.totals.kcal / n.plan.target) * 100);
 
   return (
-    <div className="mt-auto surface rounded-3xl p-4">
+    <div className="surface rounded-3xl p-4">
       <div className="text-[10.5px] uppercase tracking-wider text-faint">Today</div>
       <div className="text-2xl font-semibold tabular mt-1.5">
         {Math.round(n.totals.kcal)}
