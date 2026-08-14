@@ -4,7 +4,7 @@ import {
   ACTIVITY_LEVELS, GOALS, bmi, bmiCategory, goalPlan, macroTargets,
   healthyWeightRange, cmToFeet, feetToCm, estimateBodyFat,
 } from '../lib/calc';
-import { Button, Card, Field, Icon, Input, NumberInput, Select, Segmented } from './ui';
+import { Button, Card, Field, Icon, Input, NumberInput, Select, Segmented, ThemeToggle } from './ui';
 
 const STEPS = ['You', 'Body', 'Activity', 'Goal', 'Diet', 'Plan'];
 
@@ -39,13 +39,21 @@ export default function Onboarding() {
       <div className="w-full max-w-lg">
         {/* Brand */}
         <div className="flex items-center gap-3 mb-8">
-          <div className="size-11 rounded-2xl grid place-items-center metal ">
+          <div className="size-11 rounded-2xl grid place-items-center metal">
             <Icon name="leaf" className="size-6" />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="text-lg font-semibold tracking-tight">NutriTrack</div>
             <div className="text-[12px] text-faint">Calories, macros, micros and training</div>
           </div>
+          {/* Setting up in daylight should not mean sitting through a dark
+              onboarding — the switch belongs here too, not only after signup. */}
+          <ThemeToggle
+            compact
+            className="ml-auto"
+            theme={state.theme}
+            onChange={(theme) => dispatch({ type: 'theme', theme })}
+          />
         </div>
 
         {/* Progress */}

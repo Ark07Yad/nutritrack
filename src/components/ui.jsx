@@ -543,7 +543,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
  * exist; this is the kind of control people flick several times a day
  * depending on where they are, so it lives in the chrome.
  */
-export function ThemeToggle({ theme, onChange, compact = false }) {
+export function ThemeToggle({ theme, onChange, compact = false, className = '' }) {
   const order = ['dark', 'light', 'system'];
   const meta = {
     dark:   { icon: 'moon',     label: 'Dark' },
@@ -558,11 +558,11 @@ export function ThemeToggle({ theme, onChange, compact = false }) {
       onClick={() => onChange(next)}
       aria-label={`Theme: ${current.label}. Switch to ${meta[next].label}`}
       title={`${current.label} — tap for ${meta[next].label}`}
-      className={
+      className={`${
         compact
           ? 'size-9 rounded-xl grid place-items-center text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)] active:scale-90'
           : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-[13.5px] font-medium text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)]'
-      }
+      } ${className}`}
     >
       <Icon name={current.icon} className="size-[18px] shrink-0" />
       {!compact && (
