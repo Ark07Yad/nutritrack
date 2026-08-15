@@ -7,13 +7,16 @@
 # The push backend is a separate Worker; its config lives in worker/.
 
 name = "nutritrack"
+main = "worker-entry.js"
 compatibility_date = "2026-08-12"
 
 [assets]
 directory = "./dist"
+binding = "ASSETS"
 
-# The app is a single page with tab state rather than routed URLs, so anything
-# that is not a real file should fall back to index.html. Real files — /sw.js,
-# /icon.svg, /assets/* — are still served directly and are not rewritten, which
-# matters: a service worker served as HTML would fail to register.
-not_found_handling = "single-page-application"
+# "none" makes a miss a real 404, which worker-entry.js then turns into either
+# a clean 404 (missing asset) or the app shell (client route). The built-in
+# single-page-application mode cannot tell those apart and answers both with
+# index.html and a 200 — which is how a missing bundle becomes an unrelated
+# MIME-type error.
+not_found_handling = "none"
