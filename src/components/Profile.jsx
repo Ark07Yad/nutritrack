@@ -3,6 +3,7 @@ import { useStore } from '../lib/store';
 import { useNutrition } from '../lib/useNutrition';
 import { ACTIVITY_LEVELS, GOALS, bmr, cmToFeet, feetToCm } from '../lib/calc';
 import { AI_PROVIDERS } from '../lib/coach';
+import { STANDARDS } from '../data/rdi';
 import {
   notificationSupport, requestNotificationPermission, registerServiceWorker,
   describeSchedule, loggingStreak,
@@ -149,6 +150,18 @@ export default function Profile({ toast }) {
             <NumberInput placeholder={n.body.bodyFat.toFixed(0)}
                          value={p.bodyFat} allowEmpty min={3} max={70} decimals={1}
                          onChange={(bodyFat) => set({ bodyFat })} />
+          </Field>
+
+          <Field
+            label="Nutrient reference standard"
+            hint={STANDARDS.find((x) => x.id === (p.standard || 'eu'))?.blurb}
+          >
+            <Segmented
+              value={p.standard || 'eu'}
+              onChange={(standard) => set({ standard })}
+              options={STANDARDS.map((x) => ({ value: x.id, label: `${x.label} · ${x.short}` }))}
+              className="w-full"
+            />
           </Field>
 
           {p.gender === 'female' && (

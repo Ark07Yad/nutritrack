@@ -41,6 +41,8 @@ const initialState = {
     eatsEggs: true,
     lifeStage: 'none',
     units: 'metric',
+    /** Reference standard for micronutrient targets: 'eu' (EFSA) or 'us' (IOM). */
+    standard: 'eu',
   },
   days: {},
   customFoods: [],

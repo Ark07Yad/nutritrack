@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/audit-foods.mjs && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit": "node scripts/audit-foods.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

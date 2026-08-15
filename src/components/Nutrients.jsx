@@ -13,6 +13,7 @@ export default function Nutrients({ date }) {
   const [detail, setDetail] = useState(null);
 
   const { totals, targets, limits, macros, plan } = n;
+  const usingEU = (state.profile.standard || 'eu') === 'eu';
 
   const rows = useMemo(() => {
     const build = (keys) =>
@@ -79,7 +80,9 @@ export default function Nutrients({ date }) {
         <Bar label="Fat" value={totals.fat} target={macros.fat} unit="g" />
         <div className="h-px my-3" style={{ background: 'var(--border)' }} />
         <Bar label="Fibre" value={totals.fiber} target={limits.fiber.target} unit="g"
-             sub="14 g per 1000 kcal. Almost nobody hits this without deliberately trying." />
+             sub={usingEU
+               ? 'EFSA sets a flat 25 g adequate intake. Almost nobody hits it without deliberately trying.'
+               : '14 g per 1000 kcal, scaled to your target. Almost nobody hits it without deliberately trying.'} />
         <Bar label="Saturated fat" value={totals.satFat} target={limits.satFat.target} unit="g" limit
              sub="Ceiling, not a target — under 10% of calories." />
         <Bar label="Added sugars" value={totals.sugar} target={limits.sugar.target} unit="g" limit
@@ -123,10 +126,15 @@ export default function Nutrients({ date }) {
       )}
 
       <p className="text-[11px] text-faint leading-relaxed px-1">
-        Targets are RDA or AI values from the Institute of Medicine, adjusted for your sex, age and life stage.
-        Food values come from USDA FoodData Central and Indian Food Composition Tables; trace minerals such as
-        biotin, iodine, chromium and molybdenum are sparsely reported in public databases, so treat those four as
-        indicative rather than precise.
+        {usingEU
+          ? 'Targets are EFSA Dietary Reference Values — Population Reference Intake where one exists, otherwise Adequate Intake — adjusted for your sex, age and life stage. '
+          : 'Targets are RDA or AI values from the US Institute of Medicine, adjusted for your sex, age and life stage. '}
+        You can switch standard in Profile; the two disagree on more than twenty nutrients, most sharply on B12
+        (4.0 µg vs 2.4), copper, selenium and sodium.
+        {' '}Food values come from USDA FoodData Central, McCance &amp; Widdowson for European items, and the Indian
+        Food Composition Tables. Carbohydrate here includes fibre, the US convention — European labels declare
+        them separately, so a pack&apos;s figure will read lower for the same food. Biotin, iodine, chromium and
+        molybdenum are sparsely reported everywhere, so treat those four as indicative rather than precise.
       </p>
 
       {detail && <NutrientDetail row={detail} profile={state.profile} onClose={() => setDetail(null)} />}

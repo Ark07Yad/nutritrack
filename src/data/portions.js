@@ -362,6 +362,42 @@ export function portionsFor(food) {
 
   if (food.category === 'Coffee & Tea') return COFFEE_CUPS;
 
+  // Bread is counted in slices, and a slice varies enough between a thin white
+  // and a wholemeal doorstop that the serving weight is worth respecting.
+  if (food.category === 'Bread') {
+    const slice = food.servingGrams || 36;
+    return [
+      { id: 'slice', label: food.servingLabel?.replace(/^1 /, '') || 'slice', grams: slice, step: 1 },
+      { id: 'g', label: 'g', grams: 1, step: 10 },
+    ];
+  }
+
+  // Spreads go on by the spoon — and the whole point of the fat ladder is lost
+  // if you cannot say "a thin scrape" versus "properly buttered".
+  if (food.category === 'Spreads') {
+    return [
+      { id: 'tsp', label: 'tsp', grams: 5, step: 1, note: 'thin scrape' },
+      { id: 'tbsp', label: 'tbsp', grams: 15, step: 1, note: 'generous' },
+      { id: 'g', label: 'g', grams: 1, step: 5 },
+    ];
+  }
+
+  if (food.category === 'Cheese') {
+    const hard = /parmesan|grana|pecorino/i.test(food.name);
+    return hard
+      ? [
+          { id: 'tbsp', label: 'tbsp grated', grams: 6, step: 1 },
+          { id: 'portion', label: 'portion', grams: 30 },
+          { id: 'g', label: 'g', grams: 1, step: 5 },
+        ]
+      : [
+          { id: 'slice', label: 'slice', grams: 25, step: 1 },
+          { id: 'portion', label: 'portion', grams: 30 },
+          { id: 'matchbox', label: 'matchbox', grams: 40, note: 'a UK reference portion' },
+          { id: 'g', label: 'g', grams: 1, step: 5 },
+        ];
+  }
+
   if (food.category === 'Deli & Grab-and-go') {
     return [
       { id: 'pack', label: 'pack', grams: food.servingGrams || 180 },
