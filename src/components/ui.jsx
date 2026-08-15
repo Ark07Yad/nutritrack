@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useCountUp, stagger } from '../lib/motion';
+
+export { stagger };
 
 /* ────────────────────────────────  Icons  ──────────────────────────────── */
 
@@ -382,6 +385,19 @@ export function Bar({ value, target, unit = '', label, sub, limit = false, compa
   );
 }
 
+/**
+ * A number that tweens to its new value instead of snapping.
+ *
+ * Only worth it where the number is the point — a calorie total, a target, a
+ * streak. Applying it to every figure on screen would turn the app into a
+ * slot machine.
+ */
+export function AnimatedNumber({ value, decimals = 0, duration = 550, format, className = '' }) {
+  const shown = useCountUp(Number(value) || 0, { duration, decimals });
+  const text = format ? format(shown) : shown.toFixed(decimals);
+  return <span className={`tabular ${className}`}>{text}</span>;
+}
+
 export function Stat({ label, value, unit, tone = 'default', icon, sub }) {
   const tones = {
     default: 'text-[color:var(--text)]',
@@ -397,7 +413,9 @@ export function Stat({ label, value, unit, tone = 'default', icon, sub }) {
         {label}
       </div>
       <div className={`text-[22px] font-semibold tabular leading-none ${tones[tone]}`}>
-        {value}
+        {typeof value === 'number'
+          ? <AnimatedNumber value={value} decimals={Number.isInteger(value) ? 0 : 1} />
+          : value}
         {unit && <span className="text-[12px] font-normal text-faint ml-1">{unit}</span>}
       </div>
       {sub && <div className="text-[11px] text-faint mt-1.5">{sub}</div>}

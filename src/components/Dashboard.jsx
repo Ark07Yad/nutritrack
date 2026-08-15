@@ -4,7 +4,7 @@ import { useNutrition } from '../lib/useNutrition';
 import { MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, shortDay, isToday } from '../lib/calc';
 import { analyze } from '../lib/coach';
-import { Bar, Button, Card, Icon, NumberInput, Ring, SectionTitle, Stat, Badge, fmt } from './ui';
+import { AnimatedNumber, Bar, Button, Card, Icon, NumberInput, Ring, SectionTitle, Stat, Badge, fmt, stagger } from './ui';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 
 export default function Dashboard({ date, onNavigate }) {
@@ -86,7 +86,7 @@ export default function Dashboard({ date, onNavigate }) {
           Meals
         </SectionTitle>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {MEAL_SLOTS.map((slot) => {
+          {MEAL_SLOTS.map((slot, i) => {
             const entries = day.meals[slot.id];
             const kcal = entries.reduce((s, e) => s + (e.n?.kcal || 0), 0);
             const budget = plan.target * slot.share;
@@ -94,7 +94,8 @@ export default function Dashboard({ date, onNavigate }) {
               <button
                 key={slot.id}
                 onClick={() => onNavigate('diary', slot.id)}
-                className="surface rounded-3xl p-4 text-left transition-all hover:[background:var(--surface-hover)] active:scale-[0.98] group"
+                style={stagger(i)}
+                className="surface rounded-3xl p-4 text-left transition-all hover:[background:var(--surface-hover)] active:scale-[0.98] group animate-rise"
               >
                 <div className="flex items-center justify-between mb-2.5">
                   <span className="text-lg">{slot.icon}</span>
@@ -102,7 +103,7 @@ export default function Dashboard({ date, onNavigate }) {
                 </div>
                 <div className="text-[13px] font-medium">{slot.label}</div>
                 <div className="text-[19px] font-semibold tabular mt-1">
-                  {Math.round(kcal)}
+                  <AnimatedNumber value={kcal} />
                   <span className="text-[11px] text-faint font-normal ml-1">/ {Math.round(budget)}</span>
                 </div>
                 <div className="h-1 rounded-full mt-2.5 overflow-hidden" style={{ background: 'var(--border)' }}>
@@ -178,7 +179,7 @@ export default function Dashboard({ date, onNavigate }) {
         </SectionTitle>
         <div className="grid gap-2.5">
           {insights.map((ins, i) => (
-            <InsightRow key={i} insight={ins} />
+            <InsightRow key={i} insight={ins} index={i} />
           ))}
         </div>
       </div>
@@ -195,12 +196,14 @@ function MiniStat({ label, value, icon, tone = 'default' }) {
       <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wider text-faint">
         <Icon name={icon} className="size-3" /> {label}
       </div>
-      <div className={`text-[17px] font-semibold tabular mt-1 ${tones[tone]}`}>{value}</div>
+      <div className={`text-[17px] font-semibold tabular mt-1 ${tones[tone]}`}>
+        <AnimatedNumber value={value} />
+      </div>
     </div>
   );
 }
 
-export function InsightRow({ insight }) {
+export function InsightRow({ insight, index = 0 }) {
   const tones = {
     good: { icon: 'check', cls: 'bg-brand-500/14 text-good' },
     warn: { icon: 'alert', cls: 'bg-amber-500/14 text-warn' },
@@ -209,7 +212,7 @@ export function InsightRow({ insight }) {
   };
   const t = tones[insight.tone] || tones.info;
   return (
-    <div className="surface rounded-2xl p-4 flex gap-3.5 animate-rise">
+    <div className="surface rounded-2xl p-4 flex gap-3.5 animate-rise" style={stagger(index)}>
       <div className={`size-8 rounded-xl grid place-items-center shrink-0 ${t.cls}`}>
         <Icon name={t.icon} className="size-4" />
       </div>

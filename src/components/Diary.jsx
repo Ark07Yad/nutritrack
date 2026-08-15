@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useStore, uid, useAllFoods, useAllowedDiets, sumEntries } from '../lib/store';
 import { useNutrition } from '../lib/useNutrition';
+import { useFlipList, animateOut, stagger } from '../lib/motion';
 import { nutrientsFor, FOOD_CATEGORIES, NUTRIENT_KEYS } from '../data/foods';
 import { portionsFor, defaultPortion, describePortion } from '../data/portions';
 import { RECIPES, MEAL_SLOTS } from '../data/recipes';
@@ -80,6 +81,9 @@ export default function Diary({ date, setDate, focusSlot, clearFocus, toast }) {
 
 function SlotSection({ slot, date, entries, budget, onAdd, dispatch, toast }) {
   const totals = sumEntries(entries);
+  // Re-measure whenever the set of rows changes, so adding or removing one
+  // slides the rest into place rather than making them jump.
+  const listRef = useFlipList([entries.map((e) => e.id).join(','), date]);
 
   return (
     <Card className="overflow-visible">
@@ -104,9 +108,9 @@ function SlotSection({ slot, date, entries, budget, onAdd, dispatch, toast }) {
           Nothing logged — tap to add food
         </button>
       ) : (
-        <div className="divide-y divide-[color:var(--border)]">
-          {entries.map((e) => (
-            <EntryRow key={e.id} entry={e} slot={slot.id} date={date} dispatch={dispatch} toast={toast} />
+        <div ref={listRef} className="divide-y divide-[color:var(--border)]">
+          {entries.map((e, i) => (
+            <EntryRow key={e.id} entry={e} index={i} slot={slot.id} date={date} dispatch={dispatch} toast={toast} />
           ))}
         </div>
       )}
@@ -114,8 +118,18 @@ function SlotSection({ slot, date, entries, budget, onAdd, dispatch, toast }) {
   );
 }
 
-function EntryRow({ entry, slot, date, dispatch, toast }) {
+function EntryRow({ entry, index = 0, slot, date, dispatch, toast }) {
   const [editing, setEditing] = useState(false);
+  const rowRef = useRef(null);
+
+  // React cannot animate a node it has already unmounted, so the collapse runs
+  // first and the dispatch happens when it finishes.
+  const remove = () => {
+    animateOut(rowRef.current, () => {
+      dispatch({ type: 'removeEntry', date, slot, id: entry.id });
+      toast('Removed');
+    });
+  };
 
   const setGrams = (grams) => {
     const base = entry.per100;
@@ -125,7 +139,8 @@ function EntryRow({ entry, slot, date, dispatch, toast }) {
   };
 
   return (
-    <div className="px-4 py-3 group">
+    <div ref={rowRef} data-flip-key={entry.id} style={stagger(index, { step: 30, max: 180 })}
+         className="px-4 py-3 group animate-rise">
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <div className="text-[13.5px] font-medium truncate">{entry.name}</div>
@@ -138,11 +153,7 @@ function EntryRow({ entry, slot, date, dispatch, toast }) {
         <div className="text-[14px] font-semibold tabular shrink-0">{Math.round(entry.n.kcal)}</div>
         <div className="flex opacity-60 group-hover:opacity-100 transition-opacity">
           {entry.per100 && <IconButton name="scale" label="Adjust portion" onClick={() => setEditing((v) => !v)} className="size-8" />}
-          <IconButton
-            name="trash" label="Remove"
-            onClick={() => { dispatch({ type: 'removeEntry', date, slot, id: entry.id }); toast('Removed'); }}
-            className="size-8 hover:text-bad"
-          />
+          <IconButton name="trash" label="Remove" onClick={remove} className="size-8 hover:text-bad" />
         </div>
       </div>
       {editing && (
@@ -206,10 +217,13 @@ function makeEntry(food, grams, portionLabel = null) {
   };
 }
 
+/** Shared empty object so an absent tally does not break memoisation. */
+const EMPTY_STATS = {};
+
 /* ── Tab: search the food database ── */
 
 function SearchTab({ slot, date, toast }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const foods = useAllFoods();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('All');
@@ -222,18 +236,68 @@ function SearchTab({ slot, date, toast }) {
   const grams = activeUnit ? activeUnit.grams * portion.count : 100;
 
   const allowed = useAllowedDiets();
+  // A fresh `{}` fallback on every render would invalidate the memos below on
+  // every keystroke — the opposite of why they exist.
+  const stats = state.foodStats ?? EMPTY_STATS;
+
+  /**
+   * Results are ranked by how often *you* eat something, not just by name.
+   *
+   * A plain alphabetical list makes you scroll past ninety foods to reach the
+   * one you have logged forty times. Matching is unchanged — this only reorders
+   * within equally good matches, so searching still does what you asked.
+   */
   const results = useMemo(() => {
     const query = q.trim().toLowerCase();
+    const score = (f) => {
+      const st = stats[f.id];
+      if (!st) return 0;
+      // Recency decays over a fortnight; frequency keeps its weight.
+      const days = (Date.now() - (st.lastAt || 0)) / 86_400_000;
+      return st.count * 4 + Math.max(0, 14 - days);
+    };
     return foods
       .filter((f) => allowed.includes(f.diet))
       .filter((f) => cat === 'All' || f.category === cat)
       .filter((f) => !query || f.name.toLowerCase().includes(query) || f.category.toLowerCase().includes(query))
       .sort((a, b) => {
-        if (!query) return a.name.localeCompare(b.name);
-        return a.name.toLowerCase().indexOf(query) - b.name.toLowerCase().indexOf(query);
+        if (query) {
+          // Prefix matches first, then your own usage, then alphabetical.
+          const ia = a.name.toLowerCase().indexOf(query);
+          const ib = b.name.toLowerCase().indexOf(query);
+          if (ia !== ib) return ia - ib;
+        }
+        const s = score(b) - score(a);
+        if (s) return s;
+        return a.name.localeCompare(b.name);
       })
       .slice(0, 80);
-  }, [foods, q, cat, allowed]);
+  }, [foods, q, cat, allowed, stats]);
+
+  /** Your own shortlist, shown before you have typed anything. */
+  const shortlists = useMemo(() => {
+    if (q.trim() || cat !== 'All') return null;
+    const byId = new Map(foods.map((f) => [f.id, f]));
+    const used = Object.entries(stats)
+      .map(([id, st]) => ({ food: byId.get(id), ...st }))
+      .filter((x) => x.food && allowed.includes(x.food.diet));
+    if (used.length < 3) return null; // not enough history to be useful yet
+
+    const recent = [...used].sort((a, b) => b.lastAt - a.lastAt).slice(0, 8);
+    const recentIds = new Set(recent.map((x) => x.food.id));
+    const frequent = [...used]
+      .filter((x) => x.count > 1 && !recentIds.has(x.food.id))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+    return { recent, frequent };
+  }, [foods, stats, allowed, q, cat]);
+
+  /** One tap: log it again at the portion you last used. */
+  const quickAdd = (entryStat) => {
+    const grams = entryStat.grams || entryStat.food.servingGrams || 100;
+    dispatch({ type: 'addEntry', date, slot, entry: makeEntry(entryStat.food, grams) });
+    toast(`${entryStat.food.name} added`);
+  };
 
   const categories = ['All', ...FOOD_CATEGORIES.filter((c) => foods.some((f) => f.category === c && allowed.includes(f.diet)))];
 
@@ -312,6 +376,33 @@ function SearchTab({ slot, date, toast }) {
         ))}
       </div>
 
+      {shortlists && (
+        <div className="mb-4 space-y-3 animate-rise">
+          <QuickRow
+            title="Recent"
+            icon="clock"
+            items={shortlists.recent}
+            onQuick={quickAdd}
+            onOpen={pick}
+          />
+          {shortlists.frequent.length > 0 && (
+            <QuickRow
+              title="You eat this a lot"
+              icon="flame"
+              items={shortlists.frequent}
+              onQuick={quickAdd}
+              onOpen={pick}
+              showCount
+            />
+          )}
+          <div className="flex items-center gap-2 pt-1">
+            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+            <span className="text-[10.5px] uppercase tracking-wider text-faint">All foods</span>
+            <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
+          </div>
+        </div>
+      )}
+
       {results.length === 0 ? (
         <Empty
           icon="search"
@@ -320,13 +411,13 @@ function SearchTab({ slot, date, toast }) {
         />
       ) : (
         <div className="grid gap-1.5 sm:grid-cols-2">
-          {results.map((f) => (
+          {results.map((f, i) => (
             <button
               key={f.id}
               onClick={() => pick(f)}
-              className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all
-                         hover:[background:var(--surface-hover)] active:scale-[0.99]"
-              style={{ background: 'var(--surface)' }}
+              style={stagger(i, { step: 18, max: 220 })}
+              className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all animate-rise
+                         hover:[background:var(--surface-hover)] active:scale-[0.99] surface"
             >
               <div className="flex-1 min-w-0">
                 <div className="text-[13px] font-medium truncate">{f.name}</div>
@@ -342,6 +433,50 @@ function SearchTab({ slot, date, toast }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * A horizontal shelf of foods you already eat.
+ *
+ * Two targets per card on purpose: the body opens the portion picker as usual,
+ * while the + logs it immediately at the amount you used last time. The common
+ * case — the same breakfast again — becomes one tap, and the uncommon case is
+ * no harder than it was.
+ */
+function QuickRow({ title, icon, items, onQuick, onOpen, showCount = false }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-faint mb-2">
+        <Icon name={icon} className="size-3.5" /> {title}
+      </div>
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+        {items.map((it, i) => (
+          <div
+            key={it.food.id}
+            style={stagger(i, { step: 30, max: 200 })}
+            className="surface rounded-2xl px-3 py-2 flex items-center gap-2.5 shrink-0 animate-rise
+                       max-w-[15rem] transition-all hover:[background:var(--surface-hover)]"
+          >
+            <button onClick={() => onOpen(it.food)} className="min-w-0 text-left">
+              <div className="text-[12.5px] font-medium truncate">{it.food.name}</div>
+              <div className="text-[10.5px] text-faint tabular">
+                {Math.round((it.food.per100.kcal * (it.grams || it.food.servingGrams || 100)) / 100)} kcal
+                {showCount ? ` · ${it.count}×` : ''}
+              </div>
+            </button>
+            <button
+              onClick={() => onQuick(it)}
+              aria-label={`Add ${it.food.name}`}
+              className="grid place-items-center size-7 rounded-lg shrink-0 metal active:scale-90 transition-transform"
+            >
+              <Icon name="plus" className="size-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

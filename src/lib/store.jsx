@@ -51,6 +51,15 @@ const initialState = {
   reminders: DEFAULT_REMINDERS,
   /** Background push: `id` is the server-side subscription id, or null. */
   push: { enabled: false, id: null, syncedAt: 0 },
+  /**
+   * How often each food has been logged, and when it was last used:
+   * { [foodId]: { count, lastAt, name, grams } }
+   *
+   * Most people eat the same thirty-odd things. Surfacing those turns logging
+   * from search-and-scroll into one tap, which is the difference between a
+   * tracker people keep using and one they abandon in week three.
+   */
+  foodStats: {},
   theme: 'dark',
 };
 
@@ -69,7 +78,27 @@ function hydrateState(parsed) {
       streak: { ...DEFAULT_REMINDERS.streak, ...parsed.reminders?.streak },
     },
     push: { ...initialState.push, ...parsed.push },
+    foodStats: parsed.foodStats || {},
   };
+}
+
+/** Fold logged entries into the usage tally that powers Recent and Frequent. */
+function recordUsage(stats, entries) {
+  const now = Date.now();
+  const next = { ...stats };
+  for (const e of entries) {
+    if (!e?.foodId) continue;
+    const prev = next[e.foodId];
+    next[e.foodId] = {
+      count: (prev?.count || 0) + 1,
+      lastAt: now,
+      name: e.name,
+      // Remember the portion actually used, so a one-tap repeat is the amount
+      // you normally eat rather than an arbitrary default.
+      grams: e.grams,
+    };
+  }
+  return next;
 }
 
 function reducer(state, action) {
@@ -112,6 +141,7 @@ function reducer(state, action) {
       const day = state.days[date] || emptyDay();
       return {
         ...state,
+        foodStats: recordUsage(state.foodStats, [entry]),
         days: {
           ...state.days,
           [date]: { ...day, meals: { ...day.meals, [slot]: [...day.meals[slot], entry] } },
@@ -124,6 +154,7 @@ function reducer(state, action) {
       const day = state.days[date] || emptyDay();
       return {
         ...state,
+        foodStats: recordUsage(state.foodStats, entries),
         days: {
           ...state.days,
           [date]: { ...day, meals: { ...day.meals, [slot]: [...day.meals[slot], ...entries] } },
@@ -202,6 +233,9 @@ function reducer(state, action) {
 
     case 'addCustomFood':
       return { ...state, customFoods: [...state.customFoods, action.food] };
+
+    case 'clearFoodStats':
+      return { ...state, foodStats: {} };
 
     case 'deleteCustomFood':
       return { ...state, customFoods: state.customFoods.filter((f) => f.id !== action.id) };
