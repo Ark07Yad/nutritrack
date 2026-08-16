@@ -31,7 +31,7 @@ const RAW = [
     [['Chia seeds', 30], ['Almond milk (unsweetened, fortified)', 200], ['Blueberries', 80], ['Almonds', 15]]],
 
   ['Paneer paratha with curd', 'breakfast', 'vegetarian', 'Slow-digesting casein keeps you full till lunch',
-    [['Paneer (full fat)', 80], ['Roti / chapati (whole wheat)', 80], ['Curd / plain yogurt', 150], ['Ghee', 5]]],
+    [['Paneer (full fat)', 80], ['Roti / chapati (whole wheat)', 80], ['Curd / plain yogurt', 150], ['Ghee (clarified butter)', 5]]],
   ['Greek yogurt bowl', 'breakfast', 'vegetarian', 'High protein, probiotic, five minutes flat',
     [['Greek yogurt (plain, 2%)', 200], ['Strawberries', 100], ['Walnuts', 15], ['Rolled oats (dry)', 20]]],
   ['Protein smoothie', 'breakfast', 'vegetarian', 'For mornings when you cannot face solid food',
@@ -158,6 +158,42 @@ const RAW = [
     [['Ice cream, vanilla', 130]]],
   ['Biryani takeaway', 'lunch', 'nonveg', 'One of the better takeaway options — real protein, and the rice is the only thing to watch',
     [['Chicken biryani (restaurant)', 300], ['Curd / plain yogurt', 100]]],
+
+  /* ─────────────────────────── INDIAN THALIS ───────────────────────────
+     A thali is the unit people actually eat, and itemising one into six
+     searches is why nobody logs lunch. Portions are a normal home serving:
+     two rotis, one katori of dal, one of sabzi, rice, curd. */
+  ['North Indian veg thali', 'lunch', 'vegetarian', 'Two rotis, dal, sabzi, rice and curd — the everyday plate',
+    [['Roti / chapati (whole wheat)', 80], ['Dal fry', 180], ['Mixed veg sabzi', 150],
+     ['White rice (cooked)', 120], ['Curd / plain yogurt', 100], ['Mixed salad (leafy + tomato + cucumber)', 80]]],
+  ['Rajma chawal with curd', 'lunch', 'vegetarian', 'Complementary proteins, and the curd adds calcium the plate otherwise lacks',
+    [['Rajma masala', 200], ['White rice (cooked)', 180], ['Curd / plain yogurt', 100]]],
+  ['Dal khichdi with kadhi', 'dinner', 'vegetarian', 'Gentle on the stomach and genuinely balanced — a good late dinner',
+    [['Khichdi', 200], ['Kadhi (besan & curd)', 150], ['Papad (roasted)', 10]]],
+  ['Chole bhature plate (home)', 'lunch', 'vegetarian', 'Heavy by design. Worth seeing the number before rather than after',
+    [['Chole / chickpeas (cooked)', 180], ['Bhatura', 80], ['Onion (raw)', 30]]],
+  ['Paneer paratha breakfast', 'breakfast', 'vegetarian', 'Around 30 g protein — one of the few Indian breakfasts that really delivers',
+    [['Paneer paratha', 125], ['Curd / plain yogurt', 150], ['Mango pickle', 8]]],
+  ['Aloo paratha with curd', 'breakfast', 'vegetarian', 'Carb-heavy, so pair it with curd and keep it to one',
+    [['Aloo paratha', 120], ['Curd / plain yogurt', 150], ['Butter', 5]]],
+  ['South Indian breakfast', 'breakfast', 'vegan', 'Fermented, light and easy to digest — the idli-sambar standard',
+    [['Idli (steamed)', 150], ['Sambar', 180], ['Coconut chutney', 30]]],
+  ['Masala dosa plate', 'breakfast', 'vegan', 'One dosa with sambar and chutney, as it actually arrives',
+    [['Masala dosa', 200], ['Sambar', 150], ['Coconut chutney', 30]]],
+  ['Millet roti thali', 'dinner', 'vegan', 'Bajra instead of wheat roughly doubles the fibre and adds real iron',
+    [['Bajra roti', 110], ['Toor dal / arhar (cooked)', 180], ['Bhindi masala', 150],
+     ['Mixed salad (leafy + tomato + cucumber)', 80]]],
+  ['Chicken curry thali', 'lunch', 'nonveg', 'Roti, chicken curry and rice — a full non-veg plate at a sane size',
+    [['Roti / chapati (whole wheat)', 80], ['Chicken curry (home style)', 200],
+     ['White rice (cooked)', 120], ['Cucumber raita', 100]]],
+  ['Egg curry with rice (home)', 'dinner', 'egg', 'Cheap complete protein that still feels like a proper meal',
+    [['Egg, whole (boiled)', 100], ['White rice (cooked)', 150], ['Jeera aloo', 120]]],
+  ['Curd rice & pickle', 'dinner', 'vegetarian', 'The lightest dinner here, and the easiest thing to eat when nothing appeals',
+    [['Curd rice', 200], ['Mango pickle', 8], ['Papad (roasted)', 10]]],
+  ['Evening chai & snack', 'snack', 'vegetarian', 'The 5pm ritual, logged honestly — pakoras are the part that surprises people',
+    [['Masala chai', 150], ['Onion pakora', 60]]],
+  ['Sooji halwa & poori', 'snack', 'vegetarian', 'Festival food. Worth logging once rather than guessing',
+    [['Sooji halwa', 80], ['Puri (fried)', 60]]],
 ];
 
 let rid = 0;

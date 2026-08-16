@@ -330,56 +330,116 @@ const BOWL_CATEGORIES = new Set(['Prepared', 'Legumes']);
  * Resolve the units for a food.
  * Always ends with a raw gram/ml option so nothing is un-loggable.
  */
+/**
+ * Two options that weigh the same are one option and a distraction — a picker
+ * offering "can 330" and "glass 330" makes you read twice to learn nothing.
+ * The first spelling of a weight wins, since the lists are written most
+ * natural first.
+ */
+function dedupe(units) {
+  const seen = new Set();
+  return units.filter((u) => {
+    if (seen.has(u.grams)) return false;
+    seen.add(u.grams);
+    return true;
+  });
+}
+
 export function portionsFor(food) {
   if (!food) return [{ id: 'g', label: 'g', grams: 1, step: 10 }];
 
   const explicit = BY_NAME[food.name];
-  if (explicit) return explicit;
+  if (explicit) return dedupe(explicit);
 
   const isLiquid =
     LIQUID_CATEGORIES.has(food.category) ||
     (food.category === 'Shakes & Desserts' && LIQUID_NAMES.test(food.name)) ||
     (food.category === 'Dairy' && LIQUID_NAMES.test(food.name));
 
-  if (isLiquid) return [...ML(), ...DRINK_SIZES];
+  if (isLiquid) return dedupe([...ML(), ...DRINK_SIZES]);
 
   if (BOWL_CATEGORIES.has(food.category)) {
-    return [
+    return dedupe([
       { id: 'katori', label: 'katori', grams: 150, note: 'small bowl, 150 g' },
       { id: 'bowl', label: 'bowl', grams: 250, note: 'large bowl' },
       { id: 'plate', label: 'plate', grams: 300 },
       { id: 'g', label: 'g', grams: 1, step: 25 },
-    ];
+    ]);
   }
 
   if (food.category === 'Nuts & Seeds') {
-    return [
+    return dedupe([
       { id: 'tbsp', label: 'tbsp', grams: 10, step: 1 },
       { id: 'handful', label: 'handful', grams: 28 },
       { id: 'g', label: 'g', grams: 1, step: 5 },
-    ];
+    ]);
   }
 
-  if (food.category === 'Coffee & Tea') return COFFEE_CUPS;
+  if (food.category === 'Coffee & Tea') return dedupe(COFFEE_CUPS);
+
+  /*
+   * Dal and curry are served by the katori, not weighed. A standard steel
+   * katori is about 150 ml and holds roughly 180 g of gravy; half and full
+   * plate are how a thali is actually ordered.
+   */
+  if (food.category === 'Dal & Curry') {
+    const full = food.servingGrams || 180;
+    return dedupe([
+      { id: 'katori', label: 'katori', grams: full, note: 'a standard steel katori' },
+      { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
+      { id: 'two', label: '2 katori', grams: full * 2 },
+      { id: 'g', label: 'g', grams: 1, step: 20 },
+    ]);
+  }
+
+  /*
+   * Mithai splits into two kinds and they do not share a unit: halwa, kheer
+   * and shrikhand are spooned from a katori, while laddu, barfi and katli are
+   * counted. Offering "1 piece" of gajar halwa — and at the same weight as a
+   * katori — is worse than offering nothing, so the label decides.
+   */
+  if (food.category === 'Indian Sweets') {
+    const label = food.servingLabel || '';
+    const spooned = /katori|bowl|cup/i.test(label);
+
+    if (spooned) {
+      const full = food.servingGrams || 120;
+      return dedupe([
+        { id: 'katori', label: 'katori', grams: full },
+        { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
+        { id: 'tbsp', label: 'tbsp', grams: 20, step: 1 },
+        { id: 'g', label: 'g', grams: 1, step: 10 },
+      ]);
+    }
+
+    // "2 pieces" style labels describe a multiple; divide back to one.
+    const count = Number(label.match(/^(\d+)/)?.[1]) || 1;
+    const per = Math.max(1, Math.round((food.servingGrams || 40) / count));
+    const noun = label.replace(/^\d+\s*/, '').replace(/s$/, '') || 'piece';
+    return dedupe([
+      { id: 'piece', label: noun, grams: per, step: 1 },
+      { id: 'g', label: 'g', grams: 1, step: 10 },
+    ]);
+  }
 
   // Bread is counted in slices, and a slice varies enough between a thin white
   // and a wholemeal doorstop that the serving weight is worth respecting.
   if (food.category === 'Bread') {
     const slice = food.servingGrams || 36;
-    return [
+    return dedupe([
       { id: 'slice', label: food.servingLabel?.replace(/^1 /, '') || 'slice', grams: slice, step: 1 },
       { id: 'g', label: 'g', grams: 1, step: 10 },
-    ];
+    ]);
   }
 
   // Spreads go on by the spoon — and the whole point of the fat ladder is lost
   // if you cannot say "a thin scrape" versus "properly buttered".
   if (food.category === 'Spreads') {
-    return [
+    return dedupe([
       { id: 'tsp', label: 'tsp', grams: 5, step: 1, note: 'thin scrape' },
       { id: 'tbsp', label: 'tbsp', grams: 15, step: 1, note: 'generous' },
       { id: 'g', label: 'g', grams: 1, step: 5 },
-    ];
+    ]);
   }
 
   if (food.category === 'Cheese') {
@@ -399,19 +459,19 @@ export function portionsFor(food) {
   }
 
   if (food.category === 'Deli & Grab-and-go') {
-    return [
+    return dedupe([
       { id: 'pack', label: 'pack', grams: food.servingGrams || 180 },
       { id: 'half', label: 'half pack', grams: Math.round((food.servingGrams || 180) / 2) },
       { id: 'g', label: 'g', grams: 1, step: 10 },
-    ];
+    ]);
   }
 
   if (food.category === 'Fast Food') {
-    return [
+    return dedupe([
       { id: 'serving', label: 'serving', grams: food.servingGrams || 150 },
       { id: 'plate', label: 'plate', grams: 250 },
       { id: 'g', label: 'g', grams: 1, step: 25 },
-    ];
+    ]);
   }
 
   // Generic: the food's own serving, plus grams.

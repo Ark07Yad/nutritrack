@@ -262,10 +262,18 @@ function SearchTab({ slot, date, toast }) {
       .filter((f) => !query || f.name.toLowerCase().includes(query) || f.category.toLowerCase().includes(query))
       .sort((a, b) => {
         if (query) {
-          // Prefix matches first, then your own usage, then alphabetical.
+          /*
+           * A name match always beats a category-only match. Without this,
+           * searching "dal" returns every item in the "Dal & Curry" category —
+           * so Aloo baingan outranks Dal makhani, which is absurd. Then
+           * earlier position in the name, then your own usage, then
+           * alphabetical.
+           */
           const ia = a.name.toLowerCase().indexOf(query);
           const ib = b.name.toLowerCase().indexOf(query);
-          if (ia !== ib) return ia - ib;
+          const na = ia >= 0, nb = ib >= 0;
+          if (na !== nb) return na ? -1 : 1;
+          if (na && ia !== ib) return ia - ib;
         }
         const s = score(b) - score(a);
         if (s) return s;

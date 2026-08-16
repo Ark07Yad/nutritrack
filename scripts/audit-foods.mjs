@@ -86,7 +86,7 @@ for (const f of rows) {
   // happens to contain egg rather than an animal food.
   const animalCategory = ['Meat & Poultry', 'Fish & Seafood', 'Eggs'].includes(f.category);
   const plainCut = animalCategory &&
-    !/curry|sandwich|wrap|omelette|scotch/i.test(f.name);
+    !/curry|sandwich|wrap|omelette|scotch|bhurji|fry|tikka|masala|65/i.test(f.name);
   if (plainCut) {
     if (n.fiber > 0.5) add('WARN', f.name, 'fibre in animal food', `${n.fiber} g — meat and fish contain none`);
     if (n.vitC > 3) add('WARN', f.name, 'vitamin C in animal food', `${n.vitC} mg`);
@@ -113,9 +113,28 @@ for (const f of rows) {
   }
 
   /* ── Pure fats and pure sugars should be nearly all of that thing ── */
-  if (/oil$|^Ghee/i.test(f.name) && n.fat < 95) {
+  // Match the fat itself, not dishes cooked in it — "Ghee rice" is a rice dish.
+  if (/(^|\s)oil$|^Ghee \(/i.test(f.name) && n.fat < 95) {
     add('WARN', f.name, 'oil should be ~100 g fat', `${n.fat} g`);
   }
+}
+
+/* ────────────────────────── Recipe integrity ──────────────────────────
+   Recipes reference foods by name. A typo silently drops the ingredient —
+   the meal still renders, just with fewer calories than it claims — which is
+   worse than an error, because nothing looks wrong. This was already true of
+   one recipe that referenced 'Ghee' instead of 'Ghee (clarified butter)'.
+
+   recipes.js has a dev-only console.warn for this, which nobody sees in a
+   build. Failing here instead. */
+
+const names = new Set(rows.map((r) => r.name));
+const recipeSrc = readFileSync(new URL('../src/data/recipes.js', import.meta.url), 'utf8');
+
+for (const m of recipeSrc.matchAll(/\['([^']+)', (\d+(?:\.\d+)?)\]/g)) {
+  const [, food, grams] = m;
+  if (!names.has(food)) add('ERROR', 'recipes.js', 'unknown food reference', `"${food}"`);
+  if (Number(grams) === 0) add('ERROR', 'recipes.js', 'zero-gram ingredient', `"${food}"`);
 }
 
 /* ─────────────────────────────── Report ─────────────────────────────── */
@@ -123,7 +142,7 @@ for (const f of rows) {
 const errors = problems.filter((p) => p.level === 'ERROR');
 const warns = problems.filter((p) => p.level === 'WARN');
 
-console.log(`Audited ${rows.length} foods\n`);
+console.log(`Audited ${rows.length} foods and every recipe reference\n`);
 
 const show = (list, label) => {
   if (!list.length) return;
