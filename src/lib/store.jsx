@@ -56,6 +56,15 @@ const initialState = {
     calorieTolerance: 0.1,
     /** Weekday for the weekly weigh-in prompt: 0 = Sunday. */
     weighInDay: 1,
+    /**
+     * When the current plan started, and what you weighed then:
+     * { date: 'YYYY-MM-DD', weight }
+     *
+     * Re-anchored when the goal, target weight or timeframe changes — never
+     * when you simply log a weight, because that is what made the deadline
+     * slide forever and the calorie target drift upward as you lost weight.
+     */
+    goalAnchor: null,
   },
   days: {},
   customFoods: [],
@@ -86,7 +95,13 @@ function hydrateState(parsed) {
   return {
     ...initialState,
     ...parsed,
-    profile: { ...initialState.profile, ...parsed.profile },
+    profile: {
+      ...initialState.profile,
+      ...parsed.profile,
+      // Anyone upgrading has no anchor yet; start their plan today rather than
+      // leaving it permanently rolling.
+      goalAnchor: parsed.profile?.goalAnchor || { date: todayKey(), weight: parsed.profile?.weight ?? initialState.profile.weight },
+    },
     ai: { ...initialState.ai, ...parsed.ai },
     reminders: {
       ...DEFAULT_REMINDERS,
@@ -128,11 +143,30 @@ function reducer(state, action) {
     case 'hydrate':
       return hydrateState(action.state);
 
-    case 'profile':
-      return { ...state, profile: { ...state.profile, ...action.patch } };
+    case 'profile': {
+      const next = { ...state.profile, ...action.patch };
+
+      // Changing what the plan *is* starts a new plan; changing your weight
+      // does not. Without this distinction the deadline restarts on every
+      // weigh-in and the target creeps up as you succeed.
+      const planChanged = ['goal', 'targetWeight', 'weeks'].some(
+        (k) => k in action.patch && action.patch[k] !== state.profile[k]
+      );
+      if (planChanged || !next.goalAnchor) {
+        next.goalAnchor = { date: todayKey(), weight: next.weight };
+      }
+      return { ...state, profile: next };
+    }
 
     case 'onboarded':
-      return { ...state, onboarded: true };
+      return {
+        ...state,
+        onboarded: true,
+        profile: {
+          ...state.profile,
+          goalAnchor: state.profile.goalAnchor || { date: todayKey(), weight: state.profile.weight },
+        },
+      };
 
     case 'theme':
       return { ...state, theme: action.theme };
@@ -237,9 +271,14 @@ function reducer(state, action) {
 
     case 'logWeight': {
       const day = state.days[action.date] || emptyDay();
+      // Deliberately does not touch goalAnchor — see the note on it above.
       return {
         ...state,
-        profile: { ...state.profile, weight: action.weight },
+        profile: {
+          ...state.profile,
+          weight: action.weight,
+          goalAnchor: state.profile.goalAnchor || { date: todayKey(), weight: action.weight },
+        },
         days: { ...state.days, [action.date]: { ...day, weight: action.weight } },
       };
     }

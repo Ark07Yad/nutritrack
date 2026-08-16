@@ -95,9 +95,29 @@ export function tdee(profile) {
  *   2. Intake never drops below 1200 kcal (female) / 1500 kcal (male).
  *   3. Weekly change is capped at 1% of bodyweight for loss, 0.5% for gain.
  */
-export function goalPlan(profile) {
+export function goalPlan(profile, today = todayKey()) {
   const maintenance = tdee(profile);
   const { goal, weight, targetWeight, weeks, gender } = profile;
+
+  /*
+   * The plan is anchored to the day it was set, not to "today".
+   *
+   * Without an anchor the deadline slides forever: `weeks` is a fixed number
+   * and the finish date is recomputed from the current date on every render,
+   * so each weigh-in silently restarts the clock. The visible symptom is a
+   * calorie target that goes *up* as you lose weight — you have less left to
+   * lose but still the full timeframe to do it in, so the required deficit
+   * shrinks. You would never actually arrive.
+   *
+   * Anchoring fixes the direction of every incentive: run ahead of schedule
+   * and the target eases, fall behind and it tightens, and the finish date
+   * stays put.
+   */
+  const anchor = profile.goalAnchor || null;
+  const elapsedWeeks = anchor?.date
+    ? Math.max(0, (parseKey(today) - parseKey(anchor.date)) / (7 * 86_400_000))
+    : 0;
+  const startWeight = anchor?.weight ?? weight;
 
   const floor = gender === 'female' ? 1200 : 1500;
   const result = {
@@ -107,8 +127,14 @@ export function goalPlan(profile) {
     warnings: [],
   };
 
+  const noProgress = {
+    plannedEnd: null, elapsedWeeks, planWeeks: Math.max(1, weeks || 12),
+    weeksLeft: 0, overdue: false, startWeight,
+    lostSoFar: startWeight - weight, totalToLose: 0, progress: 0, aheadBy: 0,
+  };
+
   if (goal === 'maintain') {
-    return { ...result, target: maintenance, delta: 0, weeklyChange: 0, weeks: 0, kgToGo: 0, eta: null };
+    return { ...result, ...noProgress, target: maintenance, delta: 0, weeklyChange: 0, weeks: 0, kgToGo: 0, eta: null };
   }
 
   if (goal === 'recomp') {
@@ -116,6 +142,7 @@ export function goalPlan(profile) {
     const target = Math.max(floor, maintenance * 0.95);
     return {
       ...result,
+      ...noProgress,
       target,
       delta: target - maintenance,
       weeklyChange: 0,
@@ -127,16 +154,76 @@ export function goalPlan(profile) {
   }
 
   const kgToGo = (targetWeight || weight) - weight;      // negative = losing
-  const horizon = Math.max(1, weeks || 12);
+  const planWeeks = Math.max(1, weeks || 12);
+
+  // Half a week is the floor: as a deadline arrives the arithmetic would
+  // otherwise demand an unbounded deficit, and the caps below would have to
+  // absorb it.
+  const horizon = Math.max(0.5, planWeeks - elapsedWeeks);
+  const overdue = elapsedWeeks > planWeeks;
   const absKg = Math.abs(kgToGo);
 
   if (absKg < 0.1) {
-    return { ...result, target: maintenance, delta: 0, weeklyChange: 0, weeks: horizon, kgToGo: 0, eta: null,
-      warnings: ['Your target weight matches your current weight, so this is really a maintenance plan.'] };
+    return { ...result, ...noProgress, target: maintenance, delta: 0, weeklyChange: 0, weeks: horizon, kgToGo: 0, eta: null,
+      progress: 1,
+      warnings: [
+        Math.abs(startWeight - weight) > 0.5
+          ? 'You have reached your target weight. Switch the goal to Maintain to get a maintenance target.'
+          : 'Your target weight matches your current weight, so this is really a maintenance plan.',
+      ] };
   }
 
-  // What the requested timeframe demands.
-  let weeklyChange = kgToGo / horizon;                    // kg per week
+  /*
+   * Two candidate rates, and we take the more demanding of the two.
+   *
+   *   planned  — the steady rate the plan was set at, from the anchor.
+   *   catchUp  — what the weight still to go over the time still left implies.
+   *
+   * Using catchUp alone is what made losing weight *raise* the calorie target:
+   * get ahead and there is less left to lose in the same time, so the deficit
+   * relaxes, so progress slows. Taking the stricter of the two means being
+   * ahead lets you finish early rather than immediately spending the lead, and
+   * the target never goes up simply because you succeeded. Falling behind
+   * still tightens it, which is the direction that should tighten.
+   */
+  const totalPlanned = (targetWeight || startWeight) - startWeight;
+  const plannedRate = totalPlanned / planWeeks;
+  const catchUpRate = kgToGo / horizon;
+
+  /*
+   * Catch-up is capped at 1.5x the planned rate. Without a cap, a short plan
+   * with a few weeks left demands an enormous rate to make up a small
+   * shortfall, and then a single good weigh-in snaps it all the way back —
+   * a 268 kcal swing in one day from a 0.6 kg change. Neither the panic nor
+   * the snap-back is useful; the honest answer to being behind on a deadline
+   * is a firmer push and, if that is not enough, a later finish.
+   */
+  const cappedCatchUp = Math.sign(catchUpRate) *
+    Math.min(Math.abs(catchUpRate), Math.abs(plannedRate) * 1.5 || Math.abs(catchUpRate));
+
+  /*
+   * Dead-band: drift under a kilo does not move the target at all.
+   *
+   * Bodyweight swings a kilo a day on food volume, salt and hydration — it is
+   * the same noise the weigh-in averaging exists to ignore, and re-planning
+   * against it every morning is chasing it. Without this, crossing from
+   * fractionally behind to fractionally ahead flips the rate and the target
+   * jumps, which reads as "I lost weight and my target went up".
+   *
+   * Real drift still gets corrected; a day's water does not.
+   */
+  const driftKg = totalPlanned !== 0
+    ? (startWeight - weight) - totalPlanned * -Math.min(1, elapsedWeeks / planWeeks)
+    : 0;
+  const meaningfulDrift = Math.abs(driftKg) >= 1;
+
+  let weeklyChange = !meaningfulDrift
+    ? plannedRate
+    : Math.abs(plannedRate) > Math.abs(cappedCatchUp) ? plannedRate : cappedCatchUp;
+
+  // Never overshoot: once the goal is met the rate must not keep pulling.
+  if (Math.sign(weeklyChange) !== Math.sign(kgToGo) && kgToGo !== 0) weeklyChange = catchUpRate;
+
   let daily = (weeklyChange * KCAL_PER_KG) / 7;           // kcal per day
   let target = maintenance + daily;
 
@@ -197,6 +284,14 @@ export function goalPlan(profile) {
     );
   }
 
+  // The finish line is a fixed date from the anchor, not a rolling one.
+  const plannedEnd = anchor?.date
+    ? addWeeks(parseKey(anchor.date), planWeeks)
+    : addWeeks(new Date(), planWeeks);
+
+  const lostSoFar = startWeight - weight;
+  const totalToLose = startWeight - (targetWeight || startWeight);
+
   return {
     ...result,
     target,
@@ -206,6 +301,23 @@ export function goalPlan(profile) {
     requestedWeeks: horizon,
     kgToGo,
     eta: addWeeks(new Date(), Math.ceil(realWeeks)),
+    /* ── Plan progress, for the UI ── */
+    plannedEnd,
+    elapsedWeeks,
+    planWeeks,
+    weeksLeft: horizon,
+    overdue,
+    startWeight,
+    lostSoFar,
+    totalToLose,
+    progress: totalToLose > 0 ? Math.min(1, Math.max(0, lostSoFar / totalToLose)) : 0,
+    /**
+     * Ahead or behind the straight line from anchor to deadline, in kg.
+     * Positive means ahead.
+     */
+    aheadBy: totalToLose > 0
+      ? lostSoFar - totalToLose * Math.min(1, elapsedWeeks / planWeeks)
+      : 0,
   };
 }
 

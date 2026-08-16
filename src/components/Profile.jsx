@@ -84,6 +84,48 @@ export default function Profile({ toast }) {
                 sub={n.body.bmiCat.label} />
         </div>
 
+        {/* Plan progress — so a target that moves is never mysterious. */}
+        {(p.goal === 'lose' || p.goal === 'gain') && n.plan.planWeeks > 0 && (
+          <div className="mt-4 p-4 rounded-2xl" style={{ background: 'var(--surface)' }}>
+            <div className="flex items-baseline justify-between mb-2">
+              <span className="text-[12px] font-medium">
+                Week {Math.floor(n.plan.elapsedWeeks) + 1} of {n.plan.planWeeks}
+              </span>
+              <span className="text-[11.5px] text-faint tabular">
+                {n.plan.plannedEnd
+                  ? `ends ${n.plan.plannedEnd.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  : ''}
+              </span>
+            </div>
+
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--border)' }}>
+              <div
+                className="h-full rounded-full metal"
+                style={{ width: `${n.plan.progress * 100}%`, transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)' }}
+              />
+            </div>
+
+            <div className="flex items-baseline justify-between mt-2 text-[11.5px]">
+              <span className="text-dim tabular">
+                {Math.abs(n.plan.lostSoFar).toFixed(1)} of {Math.abs(n.plan.totalToLose).toFixed(1)} kg
+              </span>
+              <span className={`tabular ${n.plan.aheadBy > 0.2 ? 'text-good' : n.plan.aheadBy < -0.2 ? 'text-warn' : 'text-faint'}`}>
+                {n.plan.aheadBy > 0.2
+                  ? `${n.plan.aheadBy.toFixed(1)} kg ahead`
+                  : n.plan.aheadBy < -0.2
+                    ? `${Math.abs(n.plan.aheadBy).toFixed(1)} kg behind`
+                    : 'on schedule'}
+              </span>
+            </div>
+
+            <p className="text-[11px] text-faint mt-2.5 leading-relaxed">
+              {n.plan.aheadBy < -0.2
+                ? 'Your target is tightened a little while you catch up, and eases back as you do. It is capped so a short deadline cannot demand something unreasonable.'
+                : 'Your daily target falls gradually as you get lighter, because a smaller body burns less. The finish date stays fixed — losing faster brings you in early rather than relaxing the target.'}
+            </p>
+          </div>
+        )}
+
         {n.plan.warnings.length > 0 && (
           <div className="mt-4 space-y-2">
             {n.plan.warnings.map((w, i) => (
