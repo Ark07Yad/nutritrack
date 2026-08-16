@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useStore } from '../lib/store';
+import WeighIn from './WeighIn';
 import { useNutrition } from '../lib/useNutrition';
 import { MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, shortDay, isToday } from '../lib/calc';
 import { analyze } from '../lib/coach';
-import { AnimatedNumber, Bar, Button, Card, Icon, NumberInput, Ring, SectionTitle, Stat, Badge, fmt, stagger } from './ui';
+import { AnimatedNumber, Bar, Button, Card, Icon, Ring, SectionTitle, Stat, Badge, fmt, stagger } from './ui';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 
 export default function Dashboard({ date, onNavigate }) {
@@ -130,7 +131,7 @@ export default function Dashboard({ date, onNavigate }) {
               tone={totals.sodium > 2300 ? 'bad' : 'default'}
               sub={totals.sodium > 2300 ? 'Over the ceiling' : `${Math.round(2300 - totals.sodium)} mg headroom`} />
         <WaterCard day={day} date={date} target={limits.water.target} dispatch={dispatch} />
-        <WeightCard day={day} date={date} profile={profile} dispatch={dispatch} plan={plan} />
+        <WeighIn compact />
       </div>
 
       {/* ── Trend ── */}
@@ -263,35 +264,6 @@ function WaterCard({ day, date, target, dispatch }) {
   );
 }
 
-function WeightCard({ day, date, profile, dispatch, plan }) {
-  const logged = day.weight;
-  const toGo = profile.targetWeight - profile.weight;
-  return (
-    <div className="surface rounded-2xl p-3.5">
-      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-faint mb-1.5">
-        <Icon name="scale" className="size-3.5" /> Weight
-      </div>
-      <div className="flex items-baseline gap-1">
-        <NumberInput
-          unstyled
-          value={logged}
-          allowEmpty
-          min={20} max={400} decimals={1}
-          placeholder={String(profile.weight)}
-          onChange={(v) => { if (v !== null) dispatch({ type: 'logWeight', date, weight: v }); }}
-          className="w-16 bg-transparent outline-none text-[22px] font-semibold tabular leading-none
-                     border-b border-transparent focus:border-brand-400/50 transition-colors"
-        />
-        <span className="text-[12px] text-faint">kg</span>
-      </div>
-      <div className="text-[11px] text-faint mt-2">
-        {plan.kgToGo && Math.abs(toGo) > 0.1
-          ? `${Math.abs(toGo).toFixed(1)} kg ${toGo < 0 ? 'to lose' : 'to gain'}`
-          : logged ? 'Logged for today' : 'Tap to log'}
-      </div>
-    </div>
-  );
-}
 
 function getGreeting() {
   const h = new Date().getHours();

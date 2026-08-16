@@ -12,6 +12,7 @@ import { FOODS, NUTRIENT_KEYS, allowedDiets } from '../data/foods';
 import { EXERCISES } from '../data/exercises';
 import { todayKey } from './calc';
 import { DEFAULT_REMINDERS, runReminderTick, registerServiceWorker } from './reminders';
+import { DEFAULT_CYCLE } from './cycle';
 import { syncPrefs } from './push';
 import * as persist from './persist';
 
@@ -20,6 +21,12 @@ export const emptyDay = () => ({
   workouts: [],
   water: 0,
   weight: null,
+  /**
+   * Steps are entered by hand. Browsers have no pedometer API — there is no way
+   * for a web app to read the step count your phone is already keeping — so
+   * this is a number you type or paste from your phone's health app.
+   */
+  steps: 0,
   note: '',
 });
 
@@ -43,6 +50,12 @@ const initialState = {
     units: 'metric',
     /** Reference standard for micronutrient targets: 'eu' (EFSA) or 'us' (IOM). */
     standard: 'eu',
+    /** Daily step target for the step streak. */
+    stepGoal: 8000,
+    /** How close to the calorie target still counts as "on target", as a fraction. */
+    calorieTolerance: 0.1,
+    /** Weekday for the weekly weigh-in prompt: 0 = Sunday. */
+    weighInDay: 1,
   },
   days: {},
   customFoods: [],
@@ -60,6 +73,10 @@ const initialState = {
    * tracker people keep using and one they abandon in week three.
    */
   foodStats: {},
+  /** Cycle tracking. Local only, and never sent anywhere — see lib/cycle.js. */
+  cycle: DEFAULT_CYCLE,
+  /** Highest milestone already celebrated, per streak kind. */
+  milestonesSeen: { logging: 0, calories: 0, steps: 0 },
   theme: 'dark',
 };
 
@@ -79,6 +96,8 @@ function hydrateState(parsed) {
     },
     push: { ...initialState.push, ...parsed.push },
     foodStats: parsed.foodStats || {},
+    cycle: { ...DEFAULT_CYCLE, ...parsed.cycle },
+    milestonesSeen: { ...initialState.milestonesSeen, ...parsed.milestonesSeen },
   };
 }
 
@@ -233,6 +252,15 @@ function reducer(state, action) {
 
     case 'addCustomFood':
       return { ...state, customFoods: [...state.customFoods, action.food] };
+
+    case 'cycle':
+      return { ...state, cycle: { ...state.cycle, ...action.patch } };
+
+    case 'milestoneSeen':
+      return {
+        ...state,
+        milestonesSeen: { ...state.milestonesSeen, [action.kind]: action.value },
+      };
 
     case 'clearFoodStats':
       return { ...state, foodStats: {} };

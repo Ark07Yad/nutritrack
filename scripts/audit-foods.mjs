@@ -81,10 +81,13 @@ for (const f of rows) {
   }
 
   /* ── Animal foods contain essentially no vitamin C or fibre ── */
-  // Only plain cuts qualify. Anything breaded, sauced, bunned or plated is a
-  // composite dish whose plant components legitimately supply fibre and vitamin C.
-  const plainCut = !/curry|prepared|sandwich|wrap|pot|salad|sushi|burger|pizza|roll|biryani|masala|momo|taco|nugget|quiche|scotch|fried|hot dog|butter chicken|salami|ham|rotisserie|deli/i.test(f.name);
-  if (['nonveg', 'egg'].includes(f.diet) && plainCut) {
+  // Only plain cuts qualify, and category is the reliable signal — a name-based
+  // exclusion list silently misses things like challah, which is bread that
+  // happens to contain egg rather than an animal food.
+  const animalCategory = ['Meat & Poultry', 'Fish & Seafood', 'Eggs'].includes(f.category);
+  const plainCut = animalCategory &&
+    !/curry|sandwich|wrap|omelette|scotch/i.test(f.name);
+  if (plainCut) {
     if (n.fiber > 0.5) add('WARN', f.name, 'fibre in animal food', `${n.fiber} g — meat and fish contain none`);
     if (n.vitC > 3) add('WARN', f.name, 'vitamin C in animal food', `${n.vitC} mg`);
   }
