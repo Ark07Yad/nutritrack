@@ -10,6 +10,8 @@ import Nutrients from './components/Nutrients';
 import Progress from './components/Progress';
 import Coach from './components/Coach';
 import ProfileScreen from './components/Profile';
+import Streaks from './components/Streaks';
+import Cycle, { showCycle } from './components/Cycle';
 import { Icon, NudgeStack, ThemeToggle, Toast } from './components/ui';
 
 const NAV = [
@@ -21,9 +23,19 @@ const NAV = [
 ];
 
 const SIDE_EXTRA = [
+  { id: 'streaks',  label: 'Streaks',  icon: 'flame' },
   { id: 'progress', label: 'Progress', icon: 'chart' },
   { id: 'profile',  label: 'Profile',  icon: 'user' },
 ];
+
+/**
+ * Cycle tracking is shown only when the profile's sex is female.
+ *
+ * Hidden rather than disabled — a greyed-out tab is still a statement about
+ * who the app thinks you are. The screen is also unreachable by tab id when
+ * hidden, so it cannot be opened by a stale navigation.
+ */
+const cycleNav = { id: 'cycle', label: 'Cycle', icon: 'calendar' };
 
 export default function App() {
   const { state, dispatch, nudges, dismissNudge } = useStore();
@@ -41,7 +53,8 @@ export default function App() {
   };
 
   const toast = (m) => setToastMsg(m);
-  const allNav = [...NAV, ...SIDE_EXTRA];
+  const cycleVisible = showCycle(state.profile);
+  const allNav = [...NAV, ...(cycleVisible ? [cycleNav] : []), ...SIDE_EXTRA];
 
   /** Reminder banners are actionable, not just informational. */
   const actOnNudge = (n) => {
@@ -116,6 +129,8 @@ export default function App() {
             {tab === 'workouts' && <Workouts date={date} setDate={setDate} toast={toast} />}
             {tab === 'micros' && <Nutrients date={date} />}
             {tab === 'coach' && <Coach date={date} onNavigate={navigate} />}
+            {tab === 'streaks' && <Streaks date={date} />}
+            {tab === 'cycle' && cycleVisible && <Cycle />}
             {tab === 'progress' && <Progress date={date} />}
             {tab === 'profile' && <ProfileScreen toast={toast} />}
           </div>

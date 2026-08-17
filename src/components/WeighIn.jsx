@@ -101,6 +101,18 @@ export default function WeighIn({ compact = false }) {
               ? `${analysis.change > 0 ? '+' : ''}${toDisplay(analysis.change).toFixed(2)} ${unit} vs last week`
               : 'Logged today'}
           </div>
+
+          {/*
+            The cycle note belongs here more than anywhere. A rise of a kilo in
+            the week before a period is water, and this card — seen daily, right
+            next to the number that moved — is where that gets misread as the
+            diet failing. Only a phase where it is actually true renders.
+          */}
+          {cycleNote && (
+            <p className="text-[10.5px] text-warn mt-2 leading-snug">
+              {cycleNote.split('. ')[0]}.
+            </p>
+          )}
         </div>
       );
     }

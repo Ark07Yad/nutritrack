@@ -137,6 +137,32 @@ for (const m of recipeSrc.matchAll(/\['([^']+)', (\d+(?:\.\d+)?)\]/g)) {
   if (Number(grams) === 0) add('ERROR', 'recipes.js', 'zero-gram ingredient', `"${food}"`);
 }
 
+/* ───────────────────── Cycle data must never leave ─────────────────────
+   The Cycle screen tells people their period data stays on the device. That
+   promise is only worth what it is enforced by, so this pins the exact set of
+   fields the client may send to the push server. Adding anything here is a
+   deliberate act that fails the build until the list is updated — which is the
+   point, because the failure mode is silent and irreversible. */
+
+const ALLOWED_PUSH_FIELDS = new Set([
+  'waterOn', 'waterEveryMinutes', 'waterFrom', 'waterTo',
+  'streakOn', 'streakAt', 'tzOffsetMinutes', 'waterDoneDay', 'loggedDay',
+]);
+
+const pushSrc = readFileSync(new URL('../src/lib/push.js', import.meta.url), 'utf8');
+const prefsBody = pushSrc.match(/function prefsFrom\([^)]*\)\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+const returned = prefsBody.match(/return \{([\s\S]*?)\n  \};/)?.[1] ?? '';
+
+for (const m of returned.matchAll(/^\s*([A-Za-z_$][\w$]*)\s*:/gm)) {
+  if (!ALLOWED_PUSH_FIELDS.has(m[1])) {
+    add('ERROR', 'push.js', 'field sent to server is not on the allowlist', m[1]);
+  }
+}
+if (/cycle|period|menstrual/i.test(prefsBody)) {
+  add('ERROR', 'push.js', 'cycle data referenced in the push payload', 'see prefsFrom()');
+}
+if (!returned) add('ERROR', 'push.js', 'could not parse prefsFrom() — the guard is not running', '');
+
 /* ─────────────────────────────── Report ─────────────────────────────── */
 
 const errors = problems.filter((p) => p.level === 'ERROR');

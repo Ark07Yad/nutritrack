@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useStore } from '../lib/store';
 import Streaks from './Streaks';
 import WeighIn from './WeighIn';
-import Cycle, { showCycle } from './Cycle';
 import { useNutrition } from '../lib/useNutrition';
 import { shortDay, shortDate, KCAL_PER_KG } from '../lib/calc';
 import { Badge, Card, Icon, SectionTitle, Segmented, Stat, fmt } from './ui';
@@ -92,7 +91,6 @@ export default function Progress({ date }) {
 
       <WeighIn />
 
-      {showCycle(state.profile) && <Cycle />}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Stat label="Avg intake" value={Math.round(avgKcal)} unit="kcal" icon="plate"
