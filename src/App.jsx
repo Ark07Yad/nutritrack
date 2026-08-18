@@ -12,7 +12,7 @@ import Coach from './components/Coach';
 import ProfileScreen from './components/Profile';
 import Streaks from './components/Streaks';
 import Cycle, { showCycle } from './components/Cycle';
-import { Icon, NudgeStack, ThemeToggle, Toast } from './components/ui';
+import { Icon, NudgeStack, Sheet, ThemeToggle, Toast } from './components/ui';
 
 const NAV = [
   { id: 'home',     label: 'Home',      icon: 'home' },
@@ -43,18 +43,32 @@ export default function App() {
   const [date, setDate] = useState(todayKey());
   const [focusSlot, setFocusSlot] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
+  const [moreOpen, setMoreOpen] = useState(false);
 
   if (!state.onboarded) return <Onboarding />;
 
   const navigate = (target, slot) => {
     setTab(target);
     setFocusSlot(slot ?? null);
+    setMoreOpen(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const toast = (m) => setToastMsg(m);
   const cycleVisible = showCycle(state.profile);
   const allNav = [...NAV, ...(cycleVisible ? [cycleNav] : []), ...SIDE_EXTRA];
+
+  /*
+   * The bottom bar holds five; everything else lives behind "More".
+   *
+   * Before this, Cycle and Streaks existed but had no route on a phone at all —
+   * the bar rendered only NAV and the header only added Progress and Profile,
+   * so two whole screens were unreachable on the device most people use. A
+   * sheet is the fix rather than a seventh cramped tab, and it means the next
+   * screen added does not create the same problem again.
+   */
+  const overflowNav = [...(cycleVisible ? [cycleNav] : []), ...SIDE_EXTRA];
+  const inOverflow = overflowNav.some((item) => item.id === tab);
 
   /** Reminder banners are actionable, not just informational. */
   const actOnNudge = (n) => {
@@ -114,11 +128,7 @@ export default function App() {
               </div>
               <span className="text-[15px] font-semibold tracking-tight">NutriTrack</span>
             </div>
-            <div className="flex gap-1">
-              <ThemeToggle compact theme={state.theme} onChange={(theme) => dispatch({ type: 'theme', theme })} />
-              <HeaderTab active={tab === 'progress'} icon="chart" label="Progress" onClick={() => navigate('progress')} />
-              <HeaderTab active={tab === 'profile'} icon="user" label="Profile" onClick={() => navigate('profile')} />
-            </div>
+            <ThemeToggle compact theme={state.theme} onChange={(theme) => dispatch({ type: 'theme', theme })} />
           </header>
 
           <div key={tab} className="animate-rise">
@@ -145,15 +155,58 @@ export default function App() {
             <button
               key={item.id}
               onClick={() => navigate(item.id)}
-              className={`flex flex-col items-center gap-1 px-3 py-2 rounded-2xl transition-all active:scale-90
+              aria-current={tab === item.id ? 'page' : undefined}
+              className={`flex flex-col items-center gap-1 px-2 py-2 rounded-2xl transition-all active:scale-90
                 ${tab === item.id ? 'text-good' : 'text-faint'}`}
             >
               <Icon name={item.icon} className="size-[19px]" />
               <span className="text-[9.5px] font-medium">{item.label}</span>
             </button>
           ))}
+
+          <button
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-2xl transition-all active:scale-90
+              ${inOverflow ? 'text-good' : 'text-faint'}`}
+          >
+            <span className="relative grid place-items-center size-[19px]">
+              <Icon name="menu" className="size-[19px]" />
+              {/* A dot when you are on one of the screens hidden in here, so the
+                  bar still says where you are. */}
+              {inOverflow && (
+                <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-brand-400" />
+              )}
+            </span>
+            <span className="text-[9.5px] font-medium">More</span>
+          </button>
         </div>
       </nav>
+
+      <Sheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        title="More"
+        subtitle="Everything that does not fit in the bar"
+      >
+        <div className="grid gap-1.5 pb-2">
+          {overflowNav.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => navigate(item.id)}
+              className={`flex items-center gap-3 p-3.5 rounded-2xl text-left transition-all active:scale-[0.99]
+                ${tab === item.id
+                  ? 'bg-brand-500/12 text-good'
+                  : 'surface hover:[background:var(--surface-hover)]'}`}
+            >
+              <Icon name={item.icon} className="size-[18px] shrink-0" />
+              <span className="text-[14px] font-medium">{item.label}</span>
+              {tab === item.id && <span className="ml-auto size-1.5 rounded-full bg-brand-400" />}
+            </button>
+          ))}
+        </div>
+      </Sheet>
 
       <NudgeStack nudges={nudges} onDismiss={dismissNudge} onAction={actOnNudge} />
       <Toast message={toastMsg} onDone={() => setToastMsg('')} />
@@ -161,18 +214,6 @@ export default function App() {
   );
 }
 
-function HeaderTab({ active, icon, label, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      className={`size-9 rounded-xl grid place-items-center transition-all active:scale-90
-        ${active ? 'bg-brand-500/14 text-good' : 'text-faint hover:[background:var(--surface)]'}`}
-    >
-      <Icon name={icon} className="size-[18px]" />
-    </button>
-  );
-}
 
 function SidebarSummary({ date }) {
   const n = useNutrition(date);
