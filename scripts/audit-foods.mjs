@@ -25,19 +25,24 @@ const KEYS = [
 ];
 
 /*
- * Serving weight is `\d+(\.\d+)?` — spices are logged at half a gram, and an
- * integer-only pattern silently skipped them. A row that does not match is not
- * reported as bad data, it is simply never seen, so the count guard below
- * exists to make that failure loud rather than invisible.
+ * Both quote styles, and a decimal serving weight.
+ *
+ * Every narrowing of this pattern has cost real coverage, because a row that
+ * does not match is not reported as bad data — it is simply never seen.
+ * Integer-only serving weights hid the two spices logged at half a gram.
+ * Single-quotes-only hid "General Tso's chicken", whose apostrophe forces
+ * double quotes. The count guard below is meant to catch exactly that, so it
+ * must be quote-agnostic too: written against `['` alone it missed the same
+ * row the parser did and reported a clean match of two wrong numbers.
  */
-const ROW = /^ {2}\['([^']+)',\s*'(vegan|vegetarian|egg|nonveg)',\s*'([^']+)',\s*\['([^']+)',\s*(\d+(?:\.\d+)?)\],\s*\[([^\]]+)\]\],/gm;
+const ROW = /^ {2}\[(?:'([^']+)'|"([^"]+)"),\s*'(vegan|vegetarian|egg|nonveg)',\s*'([^']+)',\s*\[(?:'([^']+)'|"([^"]+)"),\s*(\d+(?:\.\d+)?)\],\s*\[([^\]]+)\]\],/gm;
 
 const rows = [...src.matchAll(ROW)].map((m) => {
-  const values = m[6].split(',').map((s) => Number(s.trim()));
+  const values = m[8].split(',').map((s) => Number(s.trim()));
   const n = Object.fromEntries(KEYS.map((k, i) => [k, values[i]]));
   return {
-    name: m[1], diet: m[2], category: m[3],
-    servingLabel: m[4], servingGrams: Number(m[5]),
+    name: m[1] ?? m[2], diet: m[3], category: m[4],
+    servingLabel: m[5] ?? m[6], servingGrams: Number(m[7]),
     n, count: values.length,
   };
 });
@@ -49,7 +54,7 @@ const add = (level, food, rule, detail) => problems.push({ level, food, rule, de
    Two foods once sat unaudited for exactly this reason. Counting the rows that
    look like data and comparing against the rows that parsed turns a silent
    gap into a failed build. */
-const declared = (src.match(/^ {2}\['/gm) || []).length;
+const declared = (src.match(/^ {2}\[["']/gm) || []).length;
 if (declared !== rows.length) {
   add('ERROR', 'foods.js', 'unparsed rows', `${declared} data rows but ${rows.length} parsed — ${declared - rows.length} skipped every check`);
 }
