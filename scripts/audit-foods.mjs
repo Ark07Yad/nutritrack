@@ -35,7 +35,11 @@ const ROW = /^ {2}\['([^']+)',\s*'(vegan|vegetarian|egg|nonveg)',\s*'([^']+)',\s
 const rows = [...src.matchAll(ROW)].map((m) => {
   const values = m[6].split(',').map((s) => Number(s.trim()));
   const n = Object.fromEntries(KEYS.map((k, i) => [k, values[i]]));
-  return { name: m[1], diet: m[2], category: m[3], n, count: values.length };
+  return {
+    name: m[1], diet: m[2], category: m[3],
+    servingLabel: m[4], servingGrams: Number(m[5]),
+    n, count: values.length,
+  };
 });
 
 const problems = [];
@@ -174,6 +178,28 @@ for (const f of rows) {
   // Match the fat itself, not dishes cooked in it — "Ghee rice" is a rice dish.
   if (/(^|\s)oil$|^Ghee \(/i.test(f.name) && n.fat < 95) {
     add('WARN', f.name, 'oil should be ~100 g fat', `${n.fat} g`);
+  }
+}
+
+/* ───────────────────────── Portions ─────────────────────────
+   portions.js promises that "a raw g/ml unit is always available for people
+   who do weigh their food". Five hand-written overrides quietly did not offer
+   one — you could log momos by the momo but never by the gram. A promise in a
+   comment is worth what it is checked by, so it is checked here.
+
+   Also verifies every unit converts to a positive weight; a zero-gram unit
+   would log food as nothing at all. */
+
+const { portionsFor } = await import('../src/data/portions.js');
+
+for (const f of rows) {
+  const food = { name: f.name, category: f.category, servingLabel: f.servingLabel, servingGrams: f.servingGrams };
+  const units = portionsFor(food);
+  if (!units.some((u) => u.grams === 1)) {
+    add('ERROR', f.name, 'no raw gram unit', units.map((u) => u.label).join(', ') || '(none)');
+  }
+  for (const u of units) {
+    if (!(u.grams > 0)) add('ERROR', f.name, 'zero-weight portion unit', `${u.label} = ${u.grams}`);
   }
 }
 

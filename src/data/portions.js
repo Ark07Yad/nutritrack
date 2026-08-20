@@ -118,14 +118,17 @@ const BY_NAME = {
   'Pani puri (6 pieces)': [
     { id: 'piece', label: 'puri', grams: 20, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 120 },
+    { id: 'g', label: 'g', grams: 1, step: 10 },
   ],
   'Momos, steamed veg (6 pieces)': [
     { id: 'piece', label: 'momo', grams: 25, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 150 },
+    { id: 'g', label: 'g', grams: 1, step: 10 },
   ],
   'Momos, fried chicken (6 pieces)': [
     { id: 'piece', label: 'momo', grams: 27, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 160 },
+    { id: 'g', label: 'g', grams: 1, step: 10 },
   ],
   'Samosa (fried)': PIECES(60, 'samosa'),
   'Samosa chaat': PIECES(200, 'plate'),
@@ -280,8 +283,8 @@ const BY_NAME = {
   'Sliced cooked ham': [{ id: 'slice', label: 'slice', grams: 20, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
   Salami: [{ id: 'slice', label: 'slice', grams: 6, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 5 }],
   'Marinated olives': [{ id: 'olive', label: 'olive', grams: 4, step: 1 }, { id: 'portion', label: 'portion', grams: 40 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
-  'Sushi, salmon maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 25, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 150 }],
-  'Sushi, veg maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 23, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 140 }],
+  'Sushi, salmon maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 25, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 150 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  'Sushi, veg maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 23, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 140 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
   'Rotisserie chicken, breast (no skin)': PIECES(120, 'portion'),
   'Rotisserie chicken, thigh (with skin)': PIECES(110, 'thigh'),
   Coleslaw: [{ id: 'portion', label: 'portion', grams: 100 }, { id: 'tbsp', label: 'tbsp', grams: 15, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
@@ -373,6 +376,56 @@ export function portionsFor(food) {
       { id: 'tbsp', label: 'tbsp', grams: 10, step: 1 },
       { id: 'handful', label: 'handful', grams: 28 },
       { id: 'g', label: 'g', grams: 1, step: 5 },
+    ]);
+  }
+
+  /*
+   * Chinese splits three ways and the units do not transfer between them:
+   * momos and dumplings are counted, soups come in a bowl, and noodles, rice
+   * and the chilli/manchurian dishes arrive on a plate. The serving label
+   * already says which — "6 pieces", "1 bowl", "1 plate" — so it decides.
+   *
+   * Counting matters most here. Momos are ordered and eaten by the piece, and
+   * a plate of six is the unit nobody thinks in when they have had three.
+   */
+  if (food.category === 'Chinese') {
+    const counted = /^(\d+)\s*(pieces?|rolls?)/i.exec(food.servingLabel || '');
+    if (counted) {
+      const n = Number(counted[1]);
+      const noun = /roll/i.test(counted[2]) ? 'roll'
+        : /momo/i.test(food.name) ? 'momo'
+        : /dumpling|gyoza|har gow/i.test(food.name) ? 'dumpling'
+        : 'piece';
+      return dedupe([
+        { id: 'piece', label: noun, grams: Math.round((serving / n) * 10) / 10, step: 1 },
+        ...(n > 1 ? [{ id: 'plate', label: `${n} ${noun}s`, grams: serving, note: 'a full plate' }] : []),
+        { id: 'g', label: 'g', grams: 1, step: 10 },
+      ]);
+    }
+
+    if (/soup|ramen|udon/i.test(food.name)) {
+      return dedupe([
+        { id: 'bowl', label: 'bowl', grams: serving || 300 },
+        { id: 'cup', label: 'cup', grams: 240, note: '240 ml' },
+        { id: 'g', label: 'ml', grams: 1, step: 50 },
+      ]);
+    }
+
+    // Gravy dishes are ladled from a katori like any other curry.
+    if (/katori/i.test(food.servingLabel || '')) {
+      const full = serving || 180;
+      return dedupe([
+        { id: 'katori', label: 'katori', grams: full, note: 'a standard steel katori' },
+        { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
+        { id: 'g', label: 'g', grams: 1, step: 20 },
+      ]);
+    }
+
+    const full = serving || 250;
+    return dedupe([
+      { id: 'plate', label: 'plate', grams: full },
+      { id: 'half', label: 'half plate', grams: Math.round(full / 2) },
+      { id: 'g', label: 'g', grams: 1, step: 25 },
     ]);
   }
 
