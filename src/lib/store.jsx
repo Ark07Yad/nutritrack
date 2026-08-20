@@ -110,10 +110,36 @@ function hydrateState(parsed) {
       streak: { ...DEFAULT_REMINDERS.streak, ...parsed.reminders?.streak },
     },
     push: { ...initialState.push, ...parsed.push },
-    foodStats: parsed.foodStats || {},
+    foodStats: migrateFoodStats(parsed.foodStats),
     cycle: { ...DEFAULT_CYCLE, ...parsed.cycle },
     milestonesSeen: { ...initialState.milestonesSeen, ...parsed.milestonesSeen },
   };
+}
+
+/**
+ * Carry usage history across the change from positional ids to name-derived ones.
+ *
+ * Old keys look like `f42` and mean "whatever was 42nd in the list when this was
+ * saved" — which is no longer knowable. But each stat also stored the food's
+ * name, so the name is what we re-key on. Anything that no longer matches a
+ * food is dropped rather than kept under a dead key, because a stale entry
+ * would sit in the tally forever without ever resolving to anything.
+ *
+ * Runs on every hydrate and is a no-op once migrated, so there is no flag to
+ * get wrong and no ordering dependency on when it happened.
+ */
+function migrateFoodStats(saved) {
+  if (!saved) return {};
+  const idFor = new Map(FOODS.map((f) => [f.name, f.id]));
+  const next = {};
+  for (const [key, st] of Object.entries(saved)) {
+    const id = /^f\d+$/.test(key) ? idFor.get(st?.name) : key;
+    if (!id) continue;
+    // Two old keys can land on one food; keep the fuller history.
+    const prev = next[id];
+    next[id] = prev && prev.count >= (st.count || 0) ? prev : st;
+  }
+  return next;
 }
 
 /** Fold logged entries into the usage tally that powers Recent and Frequent. */

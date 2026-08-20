@@ -1,6 +1,7 @@
 /** Shared visual primitives. Everything is inline SVG or CSS — no icon deps. */
 
 import { useEffect, useRef, useState } from 'react';
+import { formatGrams } from '../data/portions';
 import { createPortal } from 'react-dom';
 import { useCountUp, stagger } from '../lib/motion';
 
@@ -548,7 +549,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
         )}
 
         <div className="text-[12px] text-faint tabular ml-auto">
-          {Math.round(unit.grams * count)} g
+          {formatGrams(unit.grams * count)} g
         </div>
       </div>
     </div>

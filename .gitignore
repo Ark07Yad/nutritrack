@@ -19,3 +19,8 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# Local project reference — deliberately not published.
+# Kept out of the repo on request, and ignored so that a stray `git add .`
+# cannot push it by accident.
+PROJECT.md

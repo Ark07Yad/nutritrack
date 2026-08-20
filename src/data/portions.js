@@ -347,6 +347,7 @@ function dedupe(units) {
 
 export function portionsFor(food) {
   if (!food) return [{ id: 'g', label: 'g', grams: 1, step: 10 }];
+  const serving = food.servingGrams || 0;
 
   const explicit = BY_NAME[food.name];
   if (explicit) return dedupe(explicit);
@@ -474,6 +475,63 @@ export function portionsFor(food) {
     ]);
   }
 
+  /*
+   * Store-cupboard ingredients are measured by the spoon and the cup, never
+   * weighed — and the right unit differs per item: flour in cups, turmeric in
+   * teaspoons, bay leaves counted one at a time.
+   *
+   * Each food's own serving label already encodes that ("1 cup", "1 tsp",
+   * "3 cloves", "1/2 cup"), so it is parsed here rather than restated in a
+   * table of fifty-odd names. A new ingredient gets sensible units the moment
+   * someone adds it, which is the only way a list this long stays correct.
+   */
+  if (food.category === 'Basics & Ingredients') {
+    const grams = { id: 'g', label: 'g', grams: 1, step: serving < 15 ? 1 : 10 };
+    const m = /^(?:(\d+)\/(\d+)|(\d+))?\s*(.*)$/.exec((food.servingLabel || '').trim()) || [];
+    const qty = m[1] ? Number(m[1]) / Number(m[2]) : m[3] ? Number(m[3]) : 1;
+    const noun = (m[4] || '').trim().toLowerCase();
+    const per = qty > 0 ? serving / qty : serving;   // grams in one of that noun
+    const r = (x) => Math.round(x * 100) / 100;
+
+    if (/^cups?$/.test(noun)) {
+      return dedupe([
+        { id: 'cup', label: 'cup', grams: r(per), note: 'dry, unpacked' },
+        { id: 'halfcup', label: '1/2 cup', grams: r(per / 2) },
+        { id: 'tbsp', label: 'tbsp', grams: r(per / 16) },
+        grams,
+      ]);
+    }
+    if (/^tsps?$/.test(noun)) {
+      return dedupe([
+        { id: 'tsp', label: 'tsp', grams: r(per), step: 0.5 },
+        { id: 'halftsp', label: '1/2 tsp', grams: r(per / 2) },
+        { id: 'tbsp', label: 'tbsp', grams: r(per * 3) },
+        grams,
+      ]);
+    }
+    if (/^tbsps?$/.test(noun)) {
+      return dedupe([
+        { id: 'tbsp', label: 'tbsp', grams: r(per), step: 0.5 },
+        { id: 'tsp', label: 'tsp', grams: r(per / 3) },
+        { id: 'quartercup', label: '1/4 cup', grams: r(per * 4) },
+        grams,
+      ]);
+    }
+    if (/^pinch$/.test(noun)) {
+      return dedupe([
+        { id: 'pinch', label: 'pinch', grams: r(per), step: 1 },
+        { id: 'tsp', label: 'tsp', grams: r(per * 4) },
+        grams,
+      ]);
+    }
+    // Counted: pods, cloves, leaves, sachets, portions. Singularised, because
+    // the picker already shows the number in front of it.
+    return dedupe([
+      { id: 'unit', label: noun.replace(/s$/, '') || 'serving', grams: r(per), step: 1 },
+      grams,
+    ]);
+  }
+
   // Generic: the food's own serving, plus grams.
   const units = [{ id: 'g', label: 'g', grams: 1, step: 10 }];
   if (food.servingGrams && food.servingLabel) {
@@ -492,11 +550,43 @@ export function defaultPortion(food) {
   return units.find((u) => u.grams !== 1) || units[0];
 }
 
+/**
+ * Round a gram amount for display, keeping a decimal below 10 g.
+ *
+ * Plain `Math.round` was fine until spices arrived: a clove is 0.33 g and
+ * rendered as "0 g", which reads as logging nothing at all. Exported because
+ * the portion picker shows the same number and the two must agree — they were
+ * rounding independently, so fixing one left the other still showing zero.
+ */
+export function formatGrams(exact) {
+  return exact < 10 ? +exact.toFixed(1) : Math.round(exact);
+}
+
 /** "2 slices (214 g)" — for showing what a choice actually amounts to. */
 export function describePortion(unit, count) {
   if (!unit) return '';
-  const grams = Math.round(unit.grams * count);
+  const grams = formatGrams(unit.grams * count);
   if (unit.grams === 1) return `${grams} ${unit.label}`;
-  const plural = count === 1 || /^(g|ml)$/.test(unit.label) ? unit.label : `${unit.label}s`;
-  return `${+count.toFixed(2)} ${plural} · ${grams} g`;
+
+  // A fraction cannot take a count in front of it — "2 1/2 cups" reads as two
+  // and a half. Multiply it explicitly instead.
+  if (/^\d+\/\d+/.test(unit.label)) {
+    return count === 1
+      ? `${unit.label} · ${grams} g`
+      : `${+count.toFixed(2)} × ${unit.label} · ${grams} g`;
+  }
+  return `${+count.toFixed(2)} ${pluralise(unit.label, count)} · ${grams} g`;
+}
+
+/**
+ * Naive `label + 's'` gave "3 pinchs", "3 tsps" and "2 smalls".
+ *
+ * Abbreviations and size words do not inflect, and sibilants take -es.
+ */
+function pluralise(label, count) {
+  if (count === 1) return label;
+  if (/^(g|ml|tsp|tbsp|oz|cl)$/i.test(label)) return label;
+  if (/^(small|medium|large|regular|half.*)$/i.test(label)) return label;
+  if (/(ch|sh|ss|x|z)$/i.test(label)) return `${label}es`;
+  return `${label}s`;
 }

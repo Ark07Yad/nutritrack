@@ -24,9 +24,15 @@ const KEYS = [
   'copper', 'manganese', 'selenium', 'iodine', 'chromium', 'molybdenum',
 ];
 
-const rows = [...src.matchAll(
-  /^ {2}\['([^']+)',\s*'(vegan|vegetarian|egg|nonveg)',\s*'([^']+)',\s*\['([^']+)',\s*(\d+)\],\s*\[([^\]]+)\]\],/gm
-)].map((m) => {
+/*
+ * Serving weight is `\d+(\.\d+)?` — spices are logged at half a gram, and an
+ * integer-only pattern silently skipped them. A row that does not match is not
+ * reported as bad data, it is simply never seen, so the count guard below
+ * exists to make that failure loud rather than invisible.
+ */
+const ROW = /^ {2}\['([^']+)',\s*'(vegan|vegetarian|egg|nonveg)',\s*'([^']+)',\s*\['([^']+)',\s*(\d+(?:\.\d+)?)\],\s*\[([^\]]+)\]\],/gm;
+
+const rows = [...src.matchAll(ROW)].map((m) => {
   const values = m[6].split(',').map((s) => Number(s.trim()));
   const n = Object.fromEntries(KEYS.map((k, i) => [k, values[i]]));
   return { name: m[1], diet: m[2], category: m[3], n, count: values.length };
@@ -34,6 +40,25 @@ const rows = [...src.matchAll(
 
 const problems = [];
 const add = (level, food, rule, detail) => problems.push({ level, food, rule, detail });
+
+/* ── Every data row must actually have been parsed ──
+   Two foods once sat unaudited for exactly this reason. Counting the rows that
+   look like data and comparing against the rows that parsed turns a silent
+   gap into a failed build. */
+const declared = (src.match(/^ {2}\['/gm) || []).length;
+if (declared !== rows.length) {
+  add('ERROR', 'foods.js', 'unparsed rows', `${declared} data rows but ${rows.length} parsed — ${declared - rows.length} skipped every check`);
+}
+
+/* ── Names must be unique ──
+   Food ids are derived from the name, so two foods sharing one would share an
+   id: usage history from one would attach to the other, and Recent would show
+   whichever the lookup happened to return. */
+const seenNames = new Map();
+for (const f of rows) {
+  if (seenNames.has(f.name)) add('ERROR', f.name, 'duplicate name', 'ids derive from names, so this collides');
+  seenNames.set(f.name, true);
+}
 
 for (const f of rows) {
   const n = f.n;
@@ -45,7 +70,28 @@ for (const f of rows) {
      it is netted out. Real foods land within a few percent; a big gap means a
      macro or the calorie figure is wrong. */
   const atwater = 4 * n.protein + 4 * (n.carbs - n.fiber) + 2 * n.fiber + 9 * n.fat;
-  if (n.kcal > 20) {
+
+  /*
+   * Atwater cannot model everything, and forcing it to would mean inventing
+   * numbers to satisfy a check rather than recording what sources say.
+   *
+   * Two real exemptions:
+   *
+   *   Fibre-dominant foods — spices, cocoa. Composition tables derive
+   *   carbohydrate "by difference" (whatever is left after protein, fat, ash
+   *   and water), which in these lumps in a lot of indigestible material. USDA
+   *   lists cocoa at 228 kcal while its own macros imply 359; the macros are
+   *   right and so is the energy, because cocoa carries a special energy
+   *   factor. Above ~35% fibre this stops being a discrepancy worth flagging.
+   *
+   *   Leaveners and sweetener substitutes — baking powder's "carbohydrate" is
+   *   mostly bicarbonate and starch that never metabolises, and sucralose
+   *   bulking agents are not absorbed at all.
+   */
+  const fibreDominant = n.carbs > 0 && n.fiber / n.carbs >= 0.35;
+  const notMetabolised = /baking powder|baking soda|sweetener|^Salt$/i.test(f.name);
+
+  if (n.kcal > 20 && !fibreDominant && !notMetabolised) {
     const diff = ((atwater - n.kcal) / n.kcal) * 100;
     if (Math.abs(diff) > 20) {
       add(Math.abs(diff) > 35 ? 'ERROR' : 'WARN', f.name, 'atwater',
@@ -73,7 +119,7 @@ for (const f of rows) {
   if (f.diet === 'vegan') {
     if (n.chol > 0) add('ERROR', f.name, 'cholesterol in vegan food', `${n.chol} mg`);
     // Fortified products legitimately carry B12 and vitamin D.
-    const fortifiable = /fortified|cereal|corn flakes|soy milk|almond milk|oat milk|energy drink|sports drink|yeast extract/i.test(f.name);
+    const fortifiable = /fortified|cereal|corn flakes|soy milk|almond milk|oat milk|energy drink|energy shot|sports drink|yeast extract/i.test(f.name);
     if (n.b12 > 0 && !fortifiable) add('ERROR', f.name, 'B12 in unfortified plant food', `${n.b12} µg`);
     if (n.vitD > 0 && !fortifiable && !/mushroom/i.test(f.name)) {
       add('WARN', f.name, 'vitamin D in plant food', `${n.vitD} µg — only fortified foods and UV mushrooms contain it`);
@@ -108,8 +154,20 @@ for (const f of rows) {
     b12: 100, b9: 2000, calcium: 2000, iron: 60, sodium: 20000,
     potassium: 3000, zinc: 60, selenium: 500, iodine: 2000,
   };
-  for (const [k, max] of Object.entries(ceilings)) {
-    if (n[k] > max) add('WARN', f.name, `${k} implausible`, `${n[k]} per 100 g (ceiling ${max})`);
+  /*
+   * Seasonings and additives break every per-100 g ceiling, correctly. Salt
+   * really is 38.7 g of sodium per 100 g and cumin really is 66 mg of iron —
+   * the numbers are only startling because nobody eats 100 g of either. The
+   * portions file logs these by the teaspoon, so the ceiling check would be
+   * flagging accurate data as suspect.
+   */
+  const seasoning = f.category === 'Basics & Ingredients' &&
+    /salt|pepper|turmeric|cumin|coriander powder|chilli|masala|mustard seed|asafoetida|cinnamon|cardamom|clove|bay leaf|fenugreek|baking|cocoa|sweetener/i.test(f.name);
+
+  if (!seasoning) {
+    for (const [k, max] of Object.entries(ceilings)) {
+      if (n[k] > max) add('WARN', f.name, `${k} implausible`, `${n[k]} per 100 g (ceiling ${max})`);
+    }
   }
 
   /* ── Pure fats and pure sugars should be nearly all of that thing ── */
