@@ -45,6 +45,26 @@ ALLOWED_ORIGINS = "https://nutritrack.ark07yad.workers.dev"
 #
 # Locally they come from .dev.vars, which is gitignored.
 
+# ── Abuse limits ──
+# The platform's [[ratelimits]] binding is deliberately not used: it was tried
+# and does not enforce on this plan, answering `{ success: true }` to every
+# call well past the configured limit. Counting in isolate memory was tried
+# next and divides by the isolate count (measured: 3 isolates for 25 requests).
+#
+# So writes are counted in a Durable Object — one instance per caller, globally
+# consistent — and reads keep the cheap in-memory counter. See the "Abuse
+# limits" comment in src/index.js.
+
+[[durable_objects.bindings]]
+name = "RATE_LIMITER"
+class_name = "RateLimiter"
+
+[[migrations]]
+tag = "v1"
+# SQLite-backed classes are the free-plan-eligible kind. This one keeps its
+# counter in memory and writes nothing, but the class still declares a backend.
+new_sqlite_classes = ["RateLimiter"]
+
 [observability]
 enabled = true
 

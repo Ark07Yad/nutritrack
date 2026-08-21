@@ -76,6 +76,178 @@ async function readJson(request) {
   }
 }
 
+/* ───────────────────────────── Abuse limits ─────────────────────────────
+ *
+ * Two layers, because they stop different things.
+ *
+ * The allowlist below is the one that matters. `POST /api/subscribe` is
+ * necessarily unauthenticated — a browser has no credential to offer before it
+ * subscribes — so without it anyone could write unlimited rows into D1 by
+ * posting made-up endpoints. Requiring the endpoint to belong to a real push
+ * service closes that off completely, because an attacker cannot mint FCM or
+ * Mozilla endpoints at will. It costs a legitimate browser nothing: the
+ * endpoint is issued by the browser's own push service, not chosen by us.
+ *
+ * The rate limiter is the second layer, and deliberately generous. Limits that
+ * are too tight break real users, because whole networks share one address —
+ * a university, an office, or a mobile carrier behind CGNAT can put thousands
+ * of people on the IP this keys on. Anything a normal user does sits orders of
+ * magnitude below these numbers: the client debounces for 1.5s and only syncs
+ * when the schedule or a done-flag actually changes, so a heavy day is a
+ * handful of requests, not hundreds.
+ *
+ * ── Why this counts in memory rather than using Cloudflare's binding ──
+ *
+ * The obvious implementation is the platform's own rate-limiting binding. It
+ * was tried first and it does not enforce on this plan: the binding is present
+ * and `limit()` resolves, but it answered `{ success: true }` to all thirty
+ * calls of a fixed key against a limit of twenty. A limiter that always says
+ * yes is worse than none at all, because the config reads like protection and
+ * nothing reports otherwise. It was removed rather than left in place looking
+ * correct.
+ *
+ * ── Two counters, because they are not worth the same ──
+ *
+ * Counting in isolate memory was tried next and is too weak on its own: 25
+ * requests measured against this Worker were served by 3 different isolates,
+ * so a per-isolate budget of 20 silently became about 7 each and never
+ * tripped. It divides by a number nobody controls.
+ *
+ * So the writes — subscribing, sending a push, guessing the tick secret — go
+ * through a Durable Object, which is a single globally-consistent instance per
+ * caller and therefore counts properly. Reads and routine preference syncs
+ * keep the in-memory counter: they are frequent, cheap, and not worth a round
+ * trip or a slice of the Durable Object request budget, and an approximate
+ * ceiling is enough for traffic that costs nothing to serve.
+ *
+ * What none of this does is protect the daily request quota: a 429 is still a
+ * Worker invocation and still counts. Stopping a flood before it reaches the
+ * Worker needs edge WAF rules, which do not apply to a workers.dev subdomain.
+ * What is protected is everything with lasting consequences — the database,
+ * the push sends, and the tick secret.
+ */
+
+/** Every mainstream browser's push service. */
+const PUSH_ENDPOINT_HOSTS = [
+  /^fcm\.googleapis\.com$/,                 // Chrome, Edge, Opera, Brave — all Chromium
+  /(^|\.)push\.services\.mozilla\.com$/,   // Firefox
+  /^web\.push\.apple\.com$/,                // Safari, macOS and iOS
+  /(^|\.)notify\.windows\.com$/,            // Edge legacy / WNS
+];
+
+/*
+ * A browser we have not listed would be turned away, which is why this is a
+ * list of families rather than exact hosts — every Chromium browser shares
+ * FCM, and Mozilla and Microsoft both use subdomains. Adding a service here is
+ * a one-line change if one ever appears.
+ */
+export function isRealPushEndpoint(endpoint) {
+  if (typeof endpoint !== 'string') return false;
+  let url;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== 'https:') return false;
+  return PUSH_ENDPOINT_HOSTS.some((host) => host.test(url.hostname));
+}
+
+const clientIp = (request) => request.headers.get('CF-Connecting-IP') || 'unknown';
+
+/** Fixed windows, per caller. Reset lazily, so there is no timer to leak. */
+const windows = new Map();
+
+/* An isolate is recycled often and this map is small, but a flood of unique
+   addresses could still grow it without bound. Expired entries are swept once
+   the map is large enough for that to be worth doing. */
+const MAX_TRACKED = 10_000;
+
+function sweep(now) {
+  for (const [key, w] of windows) if (now >= w.resetAt) windows.delete(key);
+}
+
+/**
+ * Has `key` exhausted its budget for the current window?
+ *
+ * Returns true while the caller may proceed. Never throws: a limiter that
+ * takes the API down has done more damage than the abuse it was added to
+ * prevent, and this is a second line of defence rather than the only one.
+ */
+export function withinLimit(key, limit, windowMs = 60_000) {
+  try {
+    const now = Date.now();
+    if (windows.size >= MAX_TRACKED) sweep(now);
+
+    let w = windows.get(key);
+    if (!w || now >= w.resetAt) {
+      w = { count: 0, resetAt: now + windowMs };
+      windows.set(key, w);
+    }
+    w.count += 1;
+    return w.count <= limit;
+  } catch (err) {
+    console.error('[ratelimit] failing open', err);
+    return true;
+  }
+}
+
+/** Exposed so tests can start from a clean slate. */
+export function _resetLimits() {
+  windows.clear();
+}
+
+/* Per minute, per caller. Writes create rows, send pushes, or guess at the
+   tick secret; reads and routine preference syncs are cheap and frequent. */
+const WRITE_PER_MIN = 20;
+const READ_PER_MIN = 120;
+
+/**
+ * One counter per caller, globally consistent.
+ *
+ * Held in memory rather than storage: a Durable Object is a single instance,
+ * so memory is already correct, and it keeps this off the storage budget. If
+ * the instance is evicted the window restarts early, which lets a caller
+ * through sooner than intended — the harmless direction for a mistake.
+ */
+export class RateLimiter {
+  constructor() {
+    this.count = 0;
+    this.resetAt = 0;
+  }
+
+  async fetch(request) {
+    const { limit, windowMs } = await request.json();
+    const now = Date.now();
+    if (now >= this.resetAt) {
+      this.count = 0;
+      this.resetAt = now + windowMs;
+    }
+    this.count += 1;
+    return Response.json({ allowed: this.count <= limit });
+  }
+}
+
+/**
+ * The write budget. Falls back to the in-memory counter if the Durable Object
+ * cannot be reached, so a limiter problem degrades rather than 500s.
+ */
+async function withinWriteLimit(env, key) {
+  if (!env.RATE_LIMITER) return withinLimit(`w:${key}`, WRITE_PER_MIN);
+  try {
+    const stub = env.RATE_LIMITER.get(env.RATE_LIMITER.idFromName(`w:${key}`));
+    const res = await stub.fetch('https://limiter/check', {
+      method: 'POST',
+      body: JSON.stringify({ limit: WRITE_PER_MIN, windowMs: 60_000 }),
+    });
+    const { allowed } = await res.json();
+    return allowed !== false;
+  } catch (err) {
+    console.error('[ratelimit] durable object unreachable, falling back', err);
+    return withinLimit(`w:${key}`, WRITE_PER_MIN);
+  }
+}
+
 /* ────────────────────────────── The schedule ────────────────────────────── */
 
 /**
@@ -140,6 +312,21 @@ async function handle(request, env) {
   const path = url.pathname.replace(/\/+$/, '') || '/';
   const db = env.DB;
 
+  /* Writes get the tighter budget: they create rows, send pushes, or guess at
+     the tick secret. Reads and routine preference syncs get the loose one.
+     /api/tick is limited *before* its auth check, so the secret cannot be
+     brute-forced — the real caller is a cron trigger that never comes through
+     here anyway. */
+  const costly =
+    request.method === 'POST' &&
+    (path === '/api/subscribe' || path === '/api/tick' || path.startsWith('/api/test/'));
+
+  const ip = clientIp(request);
+  const ok = costly
+    ? await withinWriteLimit(env, ip)
+    : withinLimit(`r:${ip}`, READ_PER_MIN);
+  if (!ok) return json({ error: 'Too many requests' }, 429, { 'Retry-After': '60' });
+
   if (request.method === 'GET' && (path === '/' || path === '/health')) {
     return json({
       service: 'nutritrack-push',
@@ -160,6 +347,9 @@ async function handle(request, env) {
     if (!vapidConfigured(env)) return json({ error: 'Server has no VAPID keys configured' }, 503);
     const body = await readJson(request);
     if (!body?.subscription?.endpoint) return json({ error: 'Missing subscription' }, 400);
+    if (!isRealPushEndpoint(body.subscription.endpoint)) {
+      return json({ error: 'Not a recognised push service endpoint' }, 400);
+    }
     const row = await upsertSubscription(db, { subscription: body.subscription, prefs: body.prefs });
     return json(publicView(row));
   }
