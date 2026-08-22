@@ -11,8 +11,11 @@ eating, tracks what you actually ate down to all 27 vitamins and minerals, logs
 your workouts, and has a coach that reads your real data rather than handing you
 generic advice.
 
-Everything lives on your device. There is no server, no account, and nothing is
-uploaded.
+Everything lives on your device. There is no account, and nothing you log is
+uploaded — not your food, your weight, or your cycle. The one optional
+exception is the push backend for reminders that arrive with the app closed,
+and [what it knows](#what-the-push-server-knows) is deliberately almost
+nothing.
 
 ```bash
 npm install
@@ -36,10 +39,18 @@ activity, goal) produce your BMR, maintenance calories, and a daily target for
 your goal — with a realistic timeline and an honest warning when the timeframe
 you asked for would need an unsafe deficit.
 
-**Tracks food.** A database of 123 foods, weighted toward what people actually
-eat in India — dal, paneer, roti, poha, idli, rajma — alongside the usual
-Western staples. Every food carries a full nutrient profile, not just calories
-and macros.
+**Tracks food.** A database of 567 foods across 26 categories, weighted toward
+what people actually eat rather than what is easy to tabulate: Indian home
+cooking (dal, sabzi, roti, poha, idli, rajma), Indian-Chinese and takeaway
+Chinese (manchurian, momos, hakka noodles, kung pao), fast food, coffee-shop
+drinks, deli items — and a Basics & Ingredients section of flours, raw dals,
+spices and cooking fats, so a dish that is not listed can still be built from
+its parts. Every food carries a full nutrient profile, not just calories and
+macros, and a build-time audit rejects data that contradicts itself.
+
+**Asks for portions in the units food is sold in.** Pizza by the slice *and*
+the pie diameter, dal by the katori, momos by the momo, coffee by cup size,
+flour by the cup, turmeric by the teaspoon. Grams are always available too.
 
 **Tracks all 27 micronutrients.** 14 vitamins and 13 minerals, each against an
 RDA adjusted for your sex, age and life stage, each with an explanation of what
@@ -49,7 +60,8 @@ it does and which foods on *your* diet supply the most of it.
 non-vegetarian. The setting filters every search result, meal suggestion and
 piece of coaching advice in the app.
 
-**Three ways to log a meal.** Search the database; pick one of 47 ready-made
+**Three ways to log a meal.** Search the database — ranked by what *you* eat
+most, with recent and frequent foods one tap away; pick one of 73 ready-made
 meals organised by slot and diet; or build your own — combine ingredients into a
 plate with live totals and save it for reuse, or enter calories and macros
 manually for anything the database does not have.
@@ -58,13 +70,30 @@ manually for anything the database does not have.
 for strength work, five ready-made training splits you can load straight into
 your log, and a weekly view of which muscle groups you have actually hit.
 
+**Tracks streaks, honestly.** Logging, calories-on-target and step goals each
+keep their own run, with milestones from 3 days to 1000. A day only counts if
+it actually met the bar you set, so the number means something.
+
+**Tracks cycles — and only shows it to those it applies to.** If your profile
+says female, a Cycle screen predicts your next period and fertile window from
+your own history, and flags where you are in your cycle when your weight jumps
+(a 1–2 kg swing before a period is water, not fat, and a tracker that does not
+say so is actively misleading). It is hidden rather than greyed out for anyone
+else — a disabled tab is still a statement about who the app thinks you are.
+
+This is the most sensitive data the app holds, so the promise is enforced
+rather than stated: cycle data never leaves the device, and the build fails if
+any field outside a fixed allowlist appears in what the client sends to the
+push server. See `scripts/audit-foods.mjs`.
+
 **Coaches you.** A rules engine reads your logged data and tells you what stands
 out — protein short, sodium over, three days without training, weight moving the
 wrong way for your goal. It needs no key, no account and no network.
 
 **Reminds you.** Water nudges through a window you choose, and an evening check
 that warns you when a logging streak is about to break — plus a celebration at
-3, 7, 14, 30, 60, 100, 180 and 365 days. They arrive as system notifications,
+3, 7, 14, 21, 30, 50, 75, 100, 150, 200, 250, 300, 365, 500, 750 and 1000
+days. They arrive as system notifications,
 and always as an in-app banner too, so they still land if you declined the
 notification prompt. Run the optional push backend in `server/` and they arrive
 with the app fully closed.
@@ -99,8 +128,8 @@ falls back to the built-in coach automatically.
 | Protein | 1.6 – 2.2 g per kg of bodyweight, depending on goal |
 | Fat | 25 – 28% of calories; carbs take the remainder |
 | Exercise burn | MET × 3.5 × bodyweight(kg) ÷ 200, per minute |
-| Micronutrient targets | US Institute of Medicine DRIs, adjusted for sex, age, pregnancy and lactation |
-| Food composition | USDA FoodData Central and the Indian Food Composition Tables |
+| Micronutrient targets | EFSA Dietary Reference Values by default, US Institute of Medicine DRIs selectable — adjusted for sex, age, pregnancy and lactation |
+| Food composition | USDA FoodData Central, McCance & Widdowson (UK/EU) and the Indian Food Composition Tables |
 
 **Guardrails on the goal calculation**, applied in order:
 
@@ -122,10 +151,11 @@ best-available estimates and should be read as indicative.
 ```
 src/
   data/
-    foods.js       123 foods × 35 nutrients, per 100 g
-    recipes.js     47 ready-made meals, composed from foods.js
+    foods.js       567 foods × 35 nutrients, per 100 g, in 26 categories
+    portions.js    Per-food serving units — slices, katoris, cups, teaspoons
+    recipes.js     73 ready-made meals, composed from foods.js
     exercises.js   42 exercises with MET values, plus 5 training splits
-    rdi.js         RDA/AI targets and upper limits for every micronutrient
+    rdi.js         EFSA and IOM targets and upper limits, per micronutrient
   lib/
     calc.js        BMR, TDEE, goal planning, macro splits — all pure functions
     store.jsx      Reducer + context, and the reminder loop
@@ -133,10 +163,14 @@ src/
     reminders.js   Water and streak scheduling, notification delivery
     useNutrition.js  One hook that assembles targets vs. intake for a date
     coach.js       Local analysis engine, Q&A, and the hosted-model bridge
+    cycle.js       Menstrual cycle maths. Never leaves the device — see below
+    streaks.js     Logging, calorie and step streaks, and their milestones
+    motion.js      Count-up, stagger and FLIP helpers, reduced-motion aware
     push.js        Client half of the optional push backend
   components/
     ui.jsx         Design system: cards, rings, bars, sheets, inline icons
-    Onboarding · Dashboard · Diary · Workouts · Nutrients · Progress · Coach · Profile
+    Onboarding · Dashboard · Diary · Workouts · Nutrients · Progress
+    Coach · Streaks · Cycle · Profile
 public/
   sw.js            Service worker: turns a push into a notification, on-device
 
@@ -146,6 +180,7 @@ worker/            Optional. Push backend on Cloudflare Workers (recommended)
     push.js        RFC 8291/8292 on Web Crypto, no dependencies
     db.js          D1 storage
     push.test.js   Crypto tests, incl. an RFC 5869 vector and a round-trip decrypt
+    limits.test.js Abuse limits: endpoint allowlist and the rate-limit counter
 server/            Optional. The same backend on Node
   src/
     index.js       Six routes, no framework
@@ -256,3 +291,14 @@ Full detail, API reference and deployment notes:
   tokens so contrast holds in either.
 - This gives general nutrition and training information. It is not medical
   advice and not a substitute for a doctor or registered dietitian.
+- Nutrient values are compiled from public composition tables and checked for
+  internal consistency by a build-time audit, but an audit cannot tell you a
+  figure is *right* — only that it does not contradict itself. Treat them as
+  good estimates, and the four trace minerals above as indicative.
+
+---
+
+## Licence
+
+[MIT](LICENSE) — use it, change it, ship it, sell it. Keep the copyright
+notice, and accept that it comes with no warranty.

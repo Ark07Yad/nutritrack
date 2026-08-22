@@ -1,7 +1,7 @@
 {
   "name": "nutritrack",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -23,5 +23,7 @@
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
     "vite": "^8.2.0"
-  }
+  },
+  "license": "MIT",
+  "description": "Calorie, micronutrient and training tracker. Local-first, runs on Cloudflare free tier."
 }
