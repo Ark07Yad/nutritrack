@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/audit-foods.mjs && vite build",
+    "build": "node scripts/audit-foods.mjs && vite build && node scripts/gen-headers.mjs",
     "lint": "oxlint",
     "preview": "vite preview",
     "audit": "node scripts/audit-foods.mjs"

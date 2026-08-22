@@ -20,3 +20,10 @@ binding = "ASSETS"
 # index.html and a 200 — which is how a missing bundle becomes an unrelated
 # MIME-type error.
 not_found_handling = "none"
+
+[vars]
+# Must match VITE_PUSH_SERVER in the frontend build, because it becomes the
+# connect-src entry in the Content-Security-Policy. If they disagree the
+# browser blocks every call to the reminders backend and the only sign is a
+# console error, so they are worth checking together.
+PUSH_ORIGIN = "https://nutritrack-push.ark07yad.workers.dev"

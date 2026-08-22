@@ -4,8 +4,22 @@
     {
       "name": "nutritrack",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5180
+    },
+    {
+      "name": "nutritrack-worker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "dev",
+        "--port",
+        "8791"
+      ],
+      "port": 8791
     }
   ]
 }
