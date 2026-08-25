@@ -9,8 +9,13 @@
 
 export const EXERCISES = [
   // ── Cardio ──
-  { id: 'x1',  name: 'Walking (casual, 4 km/h)',   type: 'cardio',   met: 3.0,  muscles: ['Legs'] },
-  { id: 'x2',  name: 'Brisk walking (6 km/h)',     type: 'cardio',   met: 5.0,  muscles: ['Legs'] },
+  // Walking is split by pace because it is the one activity almost everyone
+  // does and the intensity range is wide: a stroll and a brisk walk differ by
+  // nearly double the calories per minute. `pace` links the three so the
+  // logger can offer them as one choice — see WALK_PACES.
+  { id: 'x1',  name: 'Walking (slow, 3 km/h)',     type: 'cardio',   met: 2.8,  muscles: ['Legs'], pace: 'slow' },
+  { id: 'x45', name: 'Walking (moderate, 5 km/h)', type: 'cardio',   met: 3.5,  muscles: ['Legs'], pace: 'medium' },
+  { id: 'x2',  name: 'Walking (brisk, 6 km/h)',    type: 'cardio',   met: 5.0,  muscles: ['Legs'], pace: 'fast' },
   { id: 'x3',  name: 'Jogging (8 km/h)',           type: 'cardio',   met: 8.3,  muscles: ['Legs', 'Core'] },
   { id: 'x4',  name: 'Running (11 km/h)',          type: 'cardio',   met: 11.0, muscles: ['Legs', 'Core'] },
   { id: 'x5',  name: 'Cycling (moderate, 20 km/h)',type: 'cardio',   met: 8.0,  muscles: ['Legs'] },
@@ -62,6 +67,55 @@ export const EXERCISE_TYPES = ['cardio', 'strength', 'mobility', 'sport'];
 /** Kcal burned. Uses MET × 3.5 × bodyweight(kg) / 200 per minute. */
 export function burnFor(exercise, minutes, weightKg) {
   return (exercise.met * 3.5 * weightKg / 200) * minutes;
+}
+
+/* ───────────────────────────── Walking and steps ─────────────────────────────
+ *
+ * Steps are the one thing people already have a number for — their phone has
+ * been counting all day — and turning that number into calories is what makes
+ * it useful next to a food log.
+ *
+ * The chain is steps → distance → time → calories, using the same MET formula
+ * as every other exercise here rather than a second method that would quietly
+ * disagree with the first. Stride length is estimated from height, which is
+ * the standard approximation and good to within about 10% for most people.
+ */
+
+export const WALK_PACES = [
+  { id: 'slow',   label: 'Slow',   kmh: 3.2, met: 2.8, blurb: 'strolling, in no hurry' },
+  { id: 'medium', label: 'Medium', kmh: 4.8, met: 3.5, blurb: 'normal everyday pace' },
+  { id: 'fast',   label: 'Fast',   kmh: 6.4, met: 5.0, blurb: 'brisk — breathing harder' },
+];
+
+export const paceById = (id) => WALK_PACES.find((p) => p.id === id) || WALK_PACES[1];
+
+/** Walking stride ≈ 0.415 × height. Falls back to an average adult stride. */
+export function strideMetres(heightCm) {
+  const h = Number(heightCm);
+  return h > 0 ? 0.415 * (h / 100) : 0.71;
+}
+
+/**
+ * What a step count is worth.
+ *
+ * Note that pace does not simply scale the calories up: walking the same
+ * distance slowly takes longer, and the extra time offsets much of the lower
+ * intensity. That is real — the energy cost of covering a kilometre on foot
+ * barely changes with speed — so the three paces land closer together than
+ * people expect. Distance and time are returned alongside so the number is
+ * explicable rather than mysterious.
+ */
+export function stepsWalk(steps, { heightCm, weightKg, pace = 'medium' } = {}) {
+  const count = Math.max(0, Number(steps) || 0);
+  const p = paceById(pace);
+  const km = (count * strideMetres(heightCm)) / 1000;
+  const minutes = p.kmh > 0 ? (km / p.kmh) * 60 : 0;
+  return {
+    pace: p,
+    km,
+    minutes,
+    kcal: burnFor({ met: p.met }, minutes, Number(weightKg) || 70),
+  };
 }
 
 /** Ready-made weekly splits the user can drop into their log. */

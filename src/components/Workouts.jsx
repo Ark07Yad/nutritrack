@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useStore, uid } from '../lib/store';
 import { useNutrition } from '../lib/useNutrition';
-import { EXERCISES, EXERCISE_TYPES, WORKOUT_PLANS, burnFor } from '../data/exercises';
+import { EXERCISES, EXERCISE_TYPES, WORKOUT_PLANS, burnFor, WALK_PACES, stepsWalk } from '../data/exercises';
 import { prettyDate, shortDay, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
-  Badge, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput,
-  SectionTitle, Sheet, Stat,
+  AnimatedNumber, Badge, Button, Card, Chip, Empty, Field, Icon, IconButton, Input,
+  NumberInput, SectionTitle, Segmented, Sheet, Stat,
 } from './ui';
+import { streakFor, stepDayOk, milestoneProgress } from '../lib/streaks';
 import { BarChart, Bar as RBar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 
 export default function Workouts({ date, setDate, toast }) {
@@ -66,6 +67,8 @@ export default function Workouts({ date, setDate, toast }) {
         <Stat label="Net calories" value={Math.round(n.totals.kcal - totalBurn)} unit="kcal" icon="target"
               sub={`Target ${Math.round(n.plan.target)}`} />
       </div>
+
+      <StepsCard date={date} toast={toast} />
 
       <div className="flex gap-2">
         <Button variant="primary" size="lg" className="flex-1" onClick={() => setAdding(true)}>
@@ -170,6 +173,163 @@ export default function Workouts({ date, setDate, toast }) {
 
 /* ─────────────────────────── Exercise picker ─────────────────────────── */
 
+/**
+ * Steps, on the training screen where they belong.
+ *
+ * They were only on the Streaks screen, which meant the goal you are actually
+ * chasing was invisible from the place you go to log activity — and walking is
+ * the activity most people do most of. Showing the streak here puts the number
+ * next to the decision it should influence.
+ *
+ * The calorie figure is shown but deliberately NOT added to the day's burn.
+ * Steps and a logged walk overlap: if both counted, an afternoon walk would be
+ * paid for twice and the app would hand back calories that were never spent —
+ * in a weight-loss tool that is the expensive direction to be wrong in. So it
+ * stays an estimate until you convert it into a session on purpose.
+ */
+function StepsCard({ date, toast }) {
+  const { state, dispatch } = useStore();
+  const p = state.profile;
+  const day = state.days[date];
+  const steps = day?.steps || 0;
+  const goal = p.stepGoal || 8000;
+  const pace = p.walkPace || 'medium';
+
+  const walk = stepsWalk(steps, { heightCm: p.height, weightKg: p.weight, pace });
+  const pct = goal > 0 ? Math.min(100, (steps / goal) * 100) : 0;
+
+  const streak = useMemo(
+    () => streakFor(state.days, (d) => stepDayOk(d, goal)),
+    [state.days, goal]
+  );
+  const milestone = milestoneProgress(streak.current);
+
+  const setSteps = (value) =>
+    dispatch({ type: 'setDayField', date, field: 'steps', value: Math.max(0, value ?? 0) });
+
+  /* Turn today's steps into a real session, so they count once and only
+     because you said so. */
+  const logAsWalk = () => {
+    if (walk.minutes < 1) return;
+    dispatch({
+      type: 'addWorkout',
+      date,
+      workout: {
+        id: uid(),
+        exerciseId: 'steps',
+        name: `Walking (${walk.pace.label.toLowerCase()}) — ${steps.toLocaleString()} steps`,
+        type: 'cardio',
+        muscles: ['Legs'],
+        minutes: Math.round(walk.minutes),
+        sets: null, reps: null, weight: null,
+        kcal: walk.kcal,
+      },
+    });
+    toast(`Logged ${Math.round(walk.kcal)} kcal from ${steps.toLocaleString()} steps`);
+  };
+
+  return (
+    <Card className="p-5">
+      <SectionTitle
+        icon="bolt"
+        action={
+          <div className="flex items-center gap-2">
+            {streak.current > 0 && (
+              <Badge tone="warn">{streak.current}-day streak</Badge>
+            )}
+            <Badge tone={steps >= goal ? 'good' : 'neutral'}>goal {goal.toLocaleString()}</Badge>
+          </div>
+        }
+      >
+        Steps today
+      </SectionTitle>
+
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <NumberInput
+            value={steps} min={0} max={100000} fallback={0}
+            onChange={setSteps}
+            className="text-[22px] font-semibold"
+          />
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-[11px] uppercase tracking-wider text-faint">of goal</div>
+          <div className="text-[19px] font-semibold tabular text-good">
+            <AnimatedNumber value={goal > 0 ? Math.min(999, (steps / goal) * 100) : 0} />%
+          </div>
+        </div>
+      </div>
+
+      <div className="h-1.5 rounded-full overflow-hidden mt-3" style={{ background: 'var(--border)' }}>
+        <div className="h-full rounded-full metal"
+             style={{ width: `${pct}%`, transition: 'width 700ms cubic-bezier(0.22,1,0.36,1)' }} />
+      </div>
+
+      <div className="mt-3 flex gap-1.5 flex-wrap">
+        {[2000, 5000, 8000, 10000].map((v) => (
+          <Chip key={v} active={steps === v} onClick={() => setSteps(v)}>{v.toLocaleString()}</Chip>
+        ))}
+      </div>
+
+      {/* ── Pace, and what those steps were worth ── */}
+      <div className="mt-4 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <div>
+            <div className="text-[12.5px] font-medium">How fast were they?</div>
+            <div className="text-[11px] text-faint mt-0.5">{walk.pace.blurb}</div>
+          </div>
+          <Segmented
+            value={pace}
+            onChange={(walkPace) => dispatch({ type: 'profile', patch: { walkPace } })}
+            options={WALK_PACES.map((w) => ({ value: w.id, label: w.label }))}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            ['Distance', walk.km.toFixed(2), 'km'],
+            ['Time', Math.round(walk.minutes), 'min'],
+            ['Burned', Math.round(walk.kcal), 'kcal'],
+          ].map(([label, value, unit]) => (
+            <div key={label} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
+              <div className="text-[10px] uppercase tracking-wider text-faint">{label}</div>
+              <div className="text-[17px] font-semibold tabular mt-1">
+                {value}<span className="text-[10px] text-faint ml-0.5">{unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-[11px] text-faint mt-2.5 leading-relaxed">
+          The same steps cover the same distance whatever the pace — a slower walk
+          just spends longer doing it. That is why the three totals land close
+          together, and why slow can edge out fast.
+        </p>
+
+        {steps > 0 && (
+          <Button variant="ghost" size="sm" className="w-full mt-3" onClick={logAsWalk}>
+            <Icon name="plus" className="size-3.5" /> Count these as a walk
+          </Button>
+        )}
+
+        <p className="text-[11px] text-faint mt-3 leading-relaxed">
+          {steps > 0
+            ? 'Not counted in today\u2019s burn yet — steps and a logged walk are usually the same walk, and paying for it twice would hand back calories you never spent. Tap above if these steps were separate.'
+            : 'Type in the count from your phone\u2019s health app. Browsers have no pedometer API, so a web app cannot read it for you.'}
+        </p>
+
+        {milestone.next && (
+          <p className="text-[11px] text-dim mt-2">
+            {streak.current > 0
+              ? `${milestone.toGo} more day${milestone.toGo === 1 ? '' : 's'} to the ${milestone.next}-day milestone.`
+              : `Hit ${goal.toLocaleString()} steps to start a streak — first milestone at ${milestone.next} days.`}
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function ExercisePicker({ date, onClose, toast, weight }) {
   const { dispatch } = useStore();
   const [q, setQ] = useState('');
@@ -230,6 +390,28 @@ function ExercisePicker({ date, onClose, toast, weight }) {
             <Badge tone="neutral">MET {sel.met}</Badge>
             {sel.muscles.map((m) => <Badge key={m} tone="neutral">{m}</Badge>)}
           </div>
+
+          {/* Walking carries a pace, and the three are the same activity at
+              different intensities — switching between them here is far more
+              natural than going back to the list to find the other one. Held
+              at a fixed duration, faster genuinely does burn more. */}
+          {sel.pace && (
+            <div className="mb-5">
+              <div className="text-[12px] uppercase tracking-wider text-faint mb-2">Pace</div>
+              <Segmented
+                value={sel.pace}
+                onChange={(id) => {
+                  const swap = EXERCISES.find((e) => e.pace === id);
+                  if (swap) setSel(swap);
+                }}
+                options={WALK_PACES.map((w) => ({ value: w.id, label: w.label }))}
+              />
+              <p className="text-[11px] text-faint mt-2">
+                {WALK_PACES.find((w) => w.id === sel.pace)?.blurb} · about{' '}
+                {Math.round(burnFor(sel, 60, weight))} kcal an hour at {weight} kg
+              </p>
+            </div>
+          )}
 
           <Field label="Duration" suffix="min">
             <NumberInput value={minutes} min={1} max={600} fallback={45} onChange={setMinutes} />

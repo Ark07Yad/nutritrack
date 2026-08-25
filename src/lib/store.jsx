@@ -52,6 +52,8 @@ const initialState = {
     standard: 'eu',
     /** Daily step target for the step streak. */
     stepGoal: 8000,
+    /** Pace used to turn a step count into distance, time and calories. */
+    walkPace: 'medium',
     /** How close to the calorie target still counts as "on target", as a fraction. */
     calorieTolerance: 0.1,
     /** Weekday for the weekly weigh-in prompt: 0 = Sunday. */
