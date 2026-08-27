@@ -348,7 +348,7 @@ function SearchTab({ slot, date, toast }) {
   const pick = (food) => {
     setSelected(food);
     const d = defaultPortion(food);
-    setPortion({ unitId: d.id, count: d.grams === 1 ? 100 : 1 });
+    setPortion({ unitId: d.id, count: d.raw ? 100 : 1 });
   };
 
   const add = () => {

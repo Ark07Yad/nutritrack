@@ -200,7 +200,7 @@ const { portionsFor } = await import('../src/data/portions.js');
 for (const f of rows) {
   const food = { name: f.name, category: f.category, servingLabel: f.servingLabel, servingGrams: f.servingGrams };
   const units = portionsFor(food);
-  if (!units.some((u) => u.grams === 1)) {
+  if (!units.some((u) => u.raw)) {
     add('ERROR', f.name, 'no raw gram unit', units.map((u) => u.label).join(', ') || '(none)');
   }
   for (const u of units) {

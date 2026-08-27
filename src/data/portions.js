@@ -19,7 +19,7 @@
 /* ─────────────────────────── Shared unit sets ─────────────────────────── */
 
 const ML = (extra = []) => [
-  { id: 'ml', label: 'ml', grams: 1, step: 50, note: 'millilitres' },
+  { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50, note: 'millilitres' },
   { id: 'cup', label: 'cup', grams: 240, note: '240 ml' },
   { id: 'glass', label: 'glass', grams: 300, note: '300 ml' },
   ...extra,
@@ -40,25 +40,25 @@ const COFFEE_CUPS = [
   { id: 'small', label: 'small', grams: 240, note: '8 oz' },
   { id: 'medium', label: 'medium', grams: 350, note: '12 oz' },
   { id: 'large', label: 'large', grams: 470, note: '16 oz' },
-  { id: 'ml', label: 'ml', grams: 1, step: 50 },
+  { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
 ];
 
 const SHOTS = [
   { id: 'shot', label: 'shot', grams: 30, step: 1 },
   { id: 'double', label: 'double', grams: 60 },
-  { id: 'ml', label: 'ml', grams: 1, step: 10 },
+  { id: 'ml', label: 'ml', grams: 1, raw: true, step: 10 },
 ];
 
 const CANS = [
   { id: 'can', label: 'can', grams: 330, note: '330 ml' },
   { id: 'bottle', label: 'bottle', grams: 500, note: '500 ml' },
   { id: 'glass', label: 'glass', grams: 300 },
-  { id: 'ml', label: 'ml', grams: 1, step: 50 },
+  { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
 ];
 
 const PIECES = (gramsEach, noun = 'piece') => [
   { id: 'piece', label: noun, grams: gramsEach, step: 1 },
-  { id: 'g', label: 'g', grams: 1, step: 10 },
+  { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
 ];
 
 /** Pizza is sold by diameter, and a slice of a 12" is nearly twice a 8" slice. */
@@ -67,7 +67,7 @@ const PIZZA_SLICES = [
   { id: 's10', label: 'slice', grams: 85, note: '10 inch medium, 8 slices' },
   { id: 's12', label: 'slice', grams: 107, note: '12 inch large, 8 slices' },
   { id: 's14', label: 'slice', grams: 140, note: '14 inch extra large, 8 slices' },
-  { id: 'g', label: 'g', grams: 1, step: 10 },
+  { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
 ];
 
 /* ─────────────────── Explicit overrides, keyed by name ─────────────────── */
@@ -91,25 +91,25 @@ const BY_NAME = {
   'Sub sandwich, veg (6 inch)': [
     { id: 'sub6', label: 'sub', grams: 220, note: '6 inch' },
     { id: 'sub12', label: 'footlong', grams: 440, note: '12 inch' },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Chicken wrap / kathi roll': PIECES(180, 'roll'),
   'French fries': [
     { id: 'small', label: 'small', grams: 71 },
     { id: 'medium', label: 'medium', grams: 117 },
     { id: 'large', label: 'large', grams: 154 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Onion rings': PIECES(85, 'serving'),
   'Fried chicken (2 pieces)': [
     { id: 'piece', label: 'piece', grams: 65, step: 1 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Chicken nuggets': [
     { id: 'piece', label: 'nugget', grams: 16, step: 1 },
     { id: 'box6', label: 'box of 6', grams: 96 },
     { id: 'box9', label: 'box of 9', grams: 144 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Garlic bread with cheese': PIECES(45, 'piece'),
 
@@ -118,17 +118,17 @@ const BY_NAME = {
   'Pani puri (6 pieces)': [
     { id: 'piece', label: 'puri', grams: 20, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 120 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Momos, steamed veg (6 pieces)': [
     { id: 'piece', label: 'momo', grams: 25, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 150 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Momos, fried chicken (6 pieces)': [
     { id: 'piece', label: 'momo', grams: 27, step: 1 },
     { id: 'plate', label: 'plate of 6', grams: 160 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Samosa (fried)': PIECES(60, 'samosa'),
   'Samosa chaat': PIECES(200, 'plate'),
@@ -136,12 +136,12 @@ const BY_NAME = {
   'Pav bhaji': [
     { id: 'plate', label: 'plate', grams: 300, note: 'bhaji + 2 pav' },
     { id: 'half', label: 'half plate', grams: 180 },
-    { id: 'g', label: 'g', grams: 1, step: 25 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 25 },
   ],
   'Chole bhature': [
     { id: 'plate', label: 'plate', grams: 300, note: 'chole + 2 bhature' },
     { id: 'half', label: 'half plate', grams: 180 },
-    { id: 'g', label: 'g', grams: 1, step: 25 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 25 },
   ],
   'Masala dosa': PIECES(200, 'dosa'),
   'Plain dosa': PIECES(80, 'dosa'),
@@ -149,7 +149,7 @@ const BY_NAME = {
   'Maggi noodles (prepared)': [
     { id: 'pack', label: 'pack', grams: 180, note: '70 g cake, cooked' },
     { id: 'half', label: 'half pack', grams: 90 },
-    { id: 'g', label: 'g', grams: 1, step: 20 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 20 },
   ],
 
   /* Staples people count rather than weigh. */
@@ -162,7 +162,7 @@ const BY_NAME = {
     { id: 'small', label: 'small', grams: 90 },
     { id: 'medium', label: 'medium', grams: 120 },
     { id: 'large', label: 'large', grams: 150 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Apple (with skin)': PIECES(180, 'apple'),
   'Orange': PIECES(150, 'orange'),
@@ -170,7 +170,7 @@ const BY_NAME = {
   'Avocado': [
     { id: 'half', label: 'half', grams: 100 },
     { id: 'whole', label: 'whole', grams: 200 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Dates (medjool)': PIECES(24, 'date'),
 
@@ -178,12 +178,12 @@ const BY_NAME = {
   'Ice cream, vanilla': [
     { id: 'scoop', label: 'scoop', grams: 65, step: 1 },
     { id: 'cup', label: 'cup', grams: 130 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Ice cream, chocolate': [
     { id: 'scoop', label: 'scoop', grams: 65, step: 1 },
     { id: 'cup', label: 'cup', grams: 130 },
-    { id: 'g', label: 'g', grams: 1, step: 10 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
   ],
   'Doughnut (glazed)': PIECES(60, 'doughnut'),
   'Brownie': PIECES(60, 'piece'),
@@ -194,7 +194,7 @@ const BY_NAME = {
   'Dark chocolate (70%)': [
     { id: 'square', label: 'square', grams: 10, step: 1 },
     { id: 'bar', label: 'bar', grams: 100 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   'Protein bar (typical)': PIECES(60, 'bar'),
 
@@ -203,26 +203,26 @@ const BY_NAME = {
     { id: 'can', label: 'can', grams: 330, note: '330 ml' },
     { id: 'bottle', label: 'bottle', grams: 500, note: '500 ml' },
     ...DRINK_SIZES,
-    { id: 'ml', label: 'ml', grams: 1, step: 50 },
+    { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
   ],
   'Diet cola (zero sugar)': [
     { id: 'can', label: 'can', grams: 330, note: '330 ml' },
     { id: 'bottle', label: 'bottle', grams: 500, note: '500 ml' },
-    { id: 'ml', label: 'ml', grams: 1, step: 50 },
+    { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
   ],
   'Energy drink': [
     { id: 'can', label: 'can', grams: 250, note: '250 ml' },
-    { id: 'ml', label: 'ml', grams: 1, step: 50 },
+    { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
   ],
   'Whey protein isolate (powder)': [
     { id: 'scoop', label: 'scoop', grams: 30, step: 1 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
 
   /* Coffee — espresso-based drinks are sold by cup size, neat shots by shot. */
   Espresso: SHOTS,
-  Macchiato: [{ id: 'small', label: 'small', grams: 60 }, { id: 'ml', label: 'ml', grams: 1, step: 10 }],
-  Cortado: [{ id: 'cup', label: 'cup', grams: 120 }, { id: 'ml', label: 'ml', grams: 1, step: 20 }],
+  Macchiato: [{ id: 'small', label: 'small', grams: 60 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 10 }],
+  Cortado: [{ id: 'cup', label: 'cup', grams: 120 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 20 }],
   'Flat white': [{ id: 'cup', label: 'cup', grams: 160 }, ...COFFEE_CUPS],
   Americano: COFFEE_CUPS,
   'Cold brew (black)': COFFEE_CUPS,
@@ -238,10 +238,10 @@ const BY_NAME = {
   'Masala chai': [
     { id: 'cutting', label: 'cutting', grams: 90, note: 'half glass' },
     { id: 'cup', label: 'cup', grams: 150 },
-    { id: 'ml', label: 'ml', grams: 1, step: 25 },
+    { id: 'ml', label: 'ml', grams: 1, raw: true, step: 25 },
   ],
-  'Green tea (no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Black tea (no milk, no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Green tea (no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Black tea (no milk, no sugar)': [{ id: 'cup', label: 'cup', grams: 240 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
   'Iced tea (sweetened)': COFFEE_CUPS,
 
   /* Cold drinks — sold in cans and bottles. */
@@ -251,18 +251,18 @@ const BY_NAME = {
   'Tonic water': CANS,
   'Sparkling water (plain)': CANS,
   Lemonade: CANS,
-  'Nimbu pani (lemon water, sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Fresh lime soda (sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Nimbu pani (lemon water, sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Fresh lime soda (sweet)': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
   'Coconut water': [
     { id: 'tender', label: 'tender coconut', grams: 300 },
     { id: 'bottle', label: 'bottle', grams: 500 },
-    { id: 'ml', label: 'ml', grams: 1, step: 50 },
+    { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 },
   ],
-  'Sports drink': [{ id: 'bottle', label: 'bottle', grams: 500 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Sugarcane juice': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Apple juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Mango juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
-  'Bottled iced coffee (sweetened)': [{ id: 'bottle', label: 'bottle', grams: 250 }, { id: 'ml', label: 'ml', grams: 1, step: 50 }],
+  'Sports drink': [{ id: 'bottle', label: 'bottle', grams: 500 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Sugarcane juice': [{ id: 'glass', label: 'glass', grams: 300 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Apple juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Mango juice (packaged)': [{ id: 'glass', label: 'glass', grams: 250 }, { id: 'carton', label: 'carton', grams: 200 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
+  'Bottled iced coffee (sweetened)': [{ id: 'bottle', label: 'bottle', grams: 250 }, { id: 'ml', label: 'ml', grams: 1, raw: true, step: 50 }],
 
   /* Deli counter — packs, pots and slices. */
   'Deli sandwich, chicken mayo': PIECES(180, 'pack'),
@@ -280,45 +280,45 @@ const BY_NAME = {
   'Quiche lorraine (slice)': PIECES(125, 'slice'),
   'Sausage roll': PIECES(110, 'roll'),
   'Scotch egg': PIECES(120, 'egg'),
-  'Sliced cooked ham': [{ id: 'slice', label: 'slice', grams: 20, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
-  Salami: [{ id: 'slice', label: 'slice', grams: 6, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 5 }],
-  'Marinated olives': [{ id: 'olive', label: 'olive', grams: 4, step: 1 }, { id: 'portion', label: 'portion', grams: 40 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
-  'Sushi, salmon maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 25, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 150 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
-  'Sushi, veg maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 23, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 140 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  'Sliced cooked ham': [{ id: 'slice', label: 'slice', grams: 20, step: 1 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
+  Salami: [{ id: 'slice', label: 'slice', grams: 6, step: 1 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 5 }],
+  'Marinated olives': [{ id: 'olive', label: 'olive', grams: 4, step: 1 }, { id: 'portion', label: 'portion', grams: 40 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
+  'Sushi, salmon maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 25, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 150 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
+  'Sushi, veg maki (6 pieces)': [{ id: 'piece', label: 'piece', grams: 23, step: 1 }, { id: 'pack', label: 'pack of 6', grams: 140 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
   'Rotisserie chicken, breast (no skin)': PIECES(120, 'portion'),
   'Rotisserie chicken, thigh (with skin)': PIECES(110, 'thigh'),
-  Coleslaw: [{ id: 'portion', label: 'portion', grams: 100 }, { id: 'tbsp', label: 'tbsp', grams: 15, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
-  'Potato salad': [{ id: 'portion', label: 'portion', grams: 150 }, { id: 'tbsp', label: 'tbsp', grams: 25, step: 1 }, { id: 'g', label: 'g', grams: 1, step: 10 }],
+  Coleslaw: [{ id: 'portion', label: 'portion', grams: 100 }, { id: 'tbsp', label: 'tbsp', grams: 15, step: 1 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
+  'Potato salad': [{ id: 'portion', label: 'portion', grams: 150 }, { id: 'tbsp', label: 'tbsp', grams: 25, step: 1 }, { id: 'g', label: 'g', grams: 1, raw: true, step: 10 }],
 
   /* Fats, measured in spoons. */
   'Olive oil (extra virgin)': [
     { id: 'tsp', label: 'tsp', grams: 4.5, step: 1 },
     { id: 'tbsp', label: 'tbsp', grams: 13.5 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   'Mustard oil': [
     { id: 'tsp', label: 'tsp', grams: 4.5, step: 1 },
     { id: 'tbsp', label: 'tbsp', grams: 13.5 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   'Coconut oil': [
     { id: 'tsp', label: 'tsp', grams: 4.5, step: 1 },
     { id: 'tbsp', label: 'tbsp', grams: 13.5 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   Ghee: [
     { id: 'tsp', label: 'tsp', grams: 5, step: 1 },
     { id: 'tbsp', label: 'tbsp', grams: 15 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   Butter: [
     { id: 'tsp', label: 'tsp', grams: 5, step: 1 },
     { id: 'tbsp', label: 'tbsp', grams: 14 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
   'Peanut butter (natural)': [
     { id: 'tbsp', label: 'tbsp', grams: 16, step: 1 },
-    { id: 'g', label: 'g', grams: 1, step: 5 },
+    { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
   ],
 };
 
@@ -400,14 +400,18 @@ export function isLiquid(food) {
 function dedupe(units) {
   const seen = new Set();
   return units.filter((u) => {
-    if (seen.has(u.grams)) return false;
-    seen.add(u.grams);
+    /* Raw units are keyed by label, not weight: g and ml both weigh 1 before
+       density is applied, and collapsing them would remove the very choice
+       this is meant to offer. */
+    const key = u.raw ? `raw:${u.label}` : u.grams;
+    if (seen.has(key)) return false;
+    seen.add(key);
     return true;
   });
 }
 
-export function portionsFor(food) {
-  if (!food) return [{ id: 'g', label: 'g', grams: 1, step: 10 }];
+function resolvePortions(food) {
+  if (!food) return [{ id: 'g', label: 'g', grams: 1, raw: true, step: 10 }];
   const serving = food.servingGrams || 0;
 
   const explicit = BY_NAME[food.name];
@@ -425,7 +429,7 @@ export function portionsFor(food) {
       { id: 'katori', label: 'katori', grams: 150, note: 'small bowl, 150 g' },
       { id: 'bowl', label: 'bowl', grams: 250, note: 'large bowl' },
       { id: 'plate', label: 'plate', grams: 300 },
-      { id: 'g', label: 'g', grams: 1, step: 25 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 25 },
     ]);
   }
 
@@ -433,7 +437,7 @@ export function portionsFor(food) {
     return dedupe([
       { id: 'tbsp', label: 'tbsp', grams: 10, step: 1 },
       { id: 'handful', label: 'handful', grams: 28 },
-      { id: 'g', label: 'g', grams: 1, step: 5 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
     ]);
   }
 
@@ -457,7 +461,7 @@ export function portionsFor(food) {
       return dedupe([
         { id: 'piece', label: noun, grams: Math.round((serving / n) * 10) / 10, step: 1 },
         ...(n > 1 ? [{ id: 'plate', label: `${n} ${noun}s`, grams: serving, note: 'a full plate' }] : []),
-        { id: 'g', label: 'g', grams: 1, step: 10 },
+        { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
       ]);
     }
 
@@ -465,7 +469,7 @@ export function portionsFor(food) {
       return dedupe([
         { id: 'bowl', label: 'bowl', grams: serving || 300 },
         { id: 'cup', label: 'cup', grams: 240, note: '240 ml' },
-        { id: 'g', label: 'ml', grams: 1, step: 50 },
+        { id: 'g', label: 'ml', grams: 1, raw: true, step: 50 },
       ]);
     }
 
@@ -475,7 +479,7 @@ export function portionsFor(food) {
       return dedupe([
         { id: 'katori', label: 'katori', grams: full, note: 'a standard steel katori' },
         { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
-        { id: 'g', label: 'g', grams: 1, step: 20 },
+        { id: 'g', label: 'g', grams: 1, raw: true, step: 20 },
       ]);
     }
 
@@ -483,7 +487,7 @@ export function portionsFor(food) {
     return dedupe([
       { id: 'plate', label: 'plate', grams: full },
       { id: 'half', label: 'half plate', grams: Math.round(full / 2) },
-      { id: 'g', label: 'g', grams: 1, step: 25 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 25 },
     ]);
   }
 
@@ -500,7 +504,7 @@ export function portionsFor(food) {
       { id: 'katori', label: 'katori', grams: full, note: 'a standard steel katori' },
       { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
       { id: 'two', label: '2 katori', grams: full * 2 },
-      { id: 'g', label: 'g', grams: 1, step: 20 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 20 },
     ]);
   }
 
@@ -520,7 +524,7 @@ export function portionsFor(food) {
         { id: 'katori', label: 'katori', grams: full },
         { id: 'half', label: 'half katori', grams: Math.round(full / 2) },
         { id: 'tbsp', label: 'tbsp', grams: 20, step: 1 },
-        { id: 'g', label: 'g', grams: 1, step: 10 },
+        { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
       ]);
     }
 
@@ -530,7 +534,7 @@ export function portionsFor(food) {
     const noun = label.replace(/^\d+\s*/, '').replace(/s$/, '') || 'piece';
     return dedupe([
       { id: 'piece', label: noun, grams: per, step: 1 },
-      { id: 'g', label: 'g', grams: 1, step: 10 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
     ]);
   }
 
@@ -540,7 +544,7 @@ export function portionsFor(food) {
     const slice = food.servingGrams || 36;
     return dedupe([
       { id: 'slice', label: food.servingLabel?.replace(/^1 /, '') || 'slice', grams: slice, step: 1 },
-      { id: 'g', label: 'g', grams: 1, step: 10 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
     ]);
   }
 
@@ -550,7 +554,7 @@ export function portionsFor(food) {
     return dedupe([
       { id: 'tsp', label: 'tsp', grams: 5, step: 1, note: 'thin scrape' },
       { id: 'tbsp', label: 'tbsp', grams: 15, step: 1, note: 'generous' },
-      { id: 'g', label: 'g', grams: 1, step: 5 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
     ]);
   }
 
@@ -560,13 +564,13 @@ export function portionsFor(food) {
       ? [
           { id: 'tbsp', label: 'tbsp grated', grams: 6, step: 1 },
           { id: 'portion', label: 'portion', grams: 30 },
-          { id: 'g', label: 'g', grams: 1, step: 5 },
+          { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
         ]
       : [
           { id: 'slice', label: 'slice', grams: 25, step: 1 },
           { id: 'portion', label: 'portion', grams: 30 },
           { id: 'matchbox', label: 'matchbox', grams: 40, note: 'a UK reference portion' },
-          { id: 'g', label: 'g', grams: 1, step: 5 },
+          { id: 'g', label: 'g', grams: 1, raw: true, step: 5 },
         ];
   }
 
@@ -574,7 +578,7 @@ export function portionsFor(food) {
     return dedupe([
       { id: 'pack', label: 'pack', grams: food.servingGrams || 180 },
       { id: 'half', label: 'half pack', grams: Math.round((food.servingGrams || 180) / 2) },
-      { id: 'g', label: 'g', grams: 1, step: 10 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 10 },
     ]);
   }
 
@@ -582,7 +586,7 @@ export function portionsFor(food) {
     return dedupe([
       { id: 'serving', label: 'serving', grams: food.servingGrams || 150 },
       { id: 'plate', label: 'plate', grams: 250 },
-      { id: 'g', label: 'g', grams: 1, step: 25 },
+      { id: 'g', label: 'g', grams: 1, raw: true, step: 25 },
     ]);
   }
 
@@ -597,7 +601,7 @@ export function portionsFor(food) {
    * someone adds it, which is the only way a list this long stays correct.
    */
   if (food.category === 'Basics & Ingredients') {
-    const grams = { id: 'g', label: 'g', grams: 1, step: serving < 15 ? 1 : 10 };
+    const grams = { id: 'g', label: 'g', grams: 1, raw: true, step: serving < 15 ? 1 : 10 };
     const m = /^(?:(\d+)\/(\d+)|(\d+))?\s*(.*)$/.exec((food.servingLabel || '').trim()) || [];
     const qty = m[1] ? Number(m[1]) / Number(m[2]) : m[3] ? Number(m[3]) : 1;
     const noun = (m[4] || '').trim().toLowerCase();
@@ -644,7 +648,7 @@ export function portionsFor(food) {
   }
 
   // Generic: the food's own serving, plus grams.
-  const units = [{ id: 'g', label: 'g', grams: 1, step: 10 }];
+  const units = [{ id: 'g', label: 'g', grams: 1, raw: true, step: 10 }];
   if (food.servingGrams && food.servingLabel) {
     units.unshift({
       id: 'serving',
@@ -655,10 +659,41 @@ export function portionsFor(food) {
   return units;
 }
 
+/*
+ * Units that are defined by volume rather than weight. A cup is 240 ml
+ * whatever is in it; a katori, a plate or a piece is an estimate of mass and
+ * must not be scaled.
+ */
+const VOLUME_UNIT = /^(ml|cup|1\/2 cup|1\/4 cup|glass|can|bottle|carton|shot|double|small|medium|large)$/i;
+
+/**
+ * Scale volume units by the food's density.
+ *
+ * Without this the picker says 100 ml of oil is 100 g while the meal builder
+ * says 92 g — the same app answering the same question two ways. Everything
+ * here was written assuming water, which is right for most drinks and wrong
+ * for the ones people actually measure by volume.
+ *
+ * Basics & Ingredients is exempt: its units are derived from the food's own
+ * servingGrams, which is already a weight, so scaling would apply density
+ * twice.
+ */
+function withDensity(food, units) {
+  const d = densityFor(food);
+  if (d === 1 || food?.category === 'Basics & Ingredients') return units;
+  return units.map((u) =>
+    VOLUME_UNIT.test(u.label) ? { ...u, grams: Math.round(u.grams * d * 100) / 100 } : u
+  );
+}
+
+export function portionsFor(food) {
+  return withDensity(food, resolvePortions(food));
+}
+
 /** The unit a picker should start on — the first non-raw one where possible. */
 export function defaultPortion(food) {
   const units = portionsFor(food);
-  return units.find((u) => u.grams !== 1) || units[0];
+  return units.find((u) => !u.raw) || units[0];
 }
 
 /**
@@ -677,7 +712,16 @@ export function formatGrams(exact) {
 export function describePortion(unit, count) {
   if (!unit) return '';
   const grams = formatGrams(unit.grams * count);
-  if (unit.grams === 1) return `${grams} ${unit.label}`;
+  if (unit.raw) {
+    /* The count IS the amount for a free-entry unit, so it must be shown as
+       typed. Printing the weight under the volume's label turned "250 ml" of
+       juice into "263 ml" — the density applied to the number and the label
+       left behind. */
+    const typed = formatGrams(count);
+    return unit.grams === 1
+      ? `${typed} ${unit.label}`
+      : `${typed} ${unit.label} · ${grams} g`;
+  }
 
   // A fraction cannot take a count in front of it — "2 1/2 cups" reads as two
   // and a half. Multiply it explicitly instead.

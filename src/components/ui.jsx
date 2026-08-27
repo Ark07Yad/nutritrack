@@ -488,7 +488,7 @@ export function Sheet({ open, onClose, title, subtitle, children, size = 'md' })
  */
 export function PortionPicker({ units, unitId, count, onChange }) {
   const unit = units.find((u) => u.id === unitId) || units[0];
-  const raw = unit.grams === 1;
+  const raw = !!unit.raw;
   const step = raw ? unit.step || 10 : 1;
 
   const bump = (delta) => {
@@ -505,7 +505,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
           {units.map((u) => (
             <button
               key={u.id}
-              onClick={() => onChange({ unitId: u.id, count: u.grams === 1 ? u.grams * 100 : 1 })}
+              onClick={() => onChange({ unitId: u.id, count: u.raw ? 100 : 1 })}
               className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-all active:scale-95 border
                 ${u.id === unit.id
                   ? 'bg-brand-500/15 text-good border-brand-400/40'
