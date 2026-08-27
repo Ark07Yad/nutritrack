@@ -3,7 +3,9 @@ import { useStore, uid, useAllFoods, useAllowedDiets, sumEntries } from '../lib/
 import { useNutrition } from '../lib/useNutrition';
 import { useFlipList, animateOut, stagger } from '../lib/motion';
 import { nutrientsFor, FOOD_CATEGORIES, NUTRIENT_KEYS } from '../data/foods';
-import { portionsFor, defaultPortion, describePortion } from '../data/portions';
+import {
+  portionsFor, defaultPortion, describePortion, densityFor, gramsToMl, isLiquid, mlToGrams,
+} from '../data/portions';
 import { RECIPES, MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
@@ -201,6 +203,40 @@ function FoodPicker({ slot, date, onClose, toast }) {
 }
 
 /** Turn a food + gram amount into a log entry. */
+/**
+ * A compact g/ml switch for one ingredient row.
+ *
+ * Offered on every ingredient rather than only on liquids: the guess about
+ * what is pourable will sometimes be wrong, and "this one is grams only" is a
+ * worse experience than a wrong default you can flip in one tap.
+ */
+function UnitToggle({ unit, onChange }) {
+  return (
+    <div className="inline-flex rounded-xl overflow-hidden shrink-0" style={{ background: 'var(--surface-hover)' }}>
+      {['g', 'ml'].map((u) => (
+        <button
+          key={u}
+          onClick={() => onChange(u)}
+          aria-pressed={unit === u}
+          className={`px-2 py-1 text-[11px] font-medium transition-colors
+            ${unit === u ? 'metal' : 'text-faint hover:text-[color:var(--text)]'}`}
+        >
+          {u}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** "200 ml · 184 g" — the grams half only when it is not the same number. */
+function describeAmount(it) {
+  const grams = it.unit === 'ml' ? mlToGrams(it.food, it.amount) : it.amount;
+  if (it.unit !== 'ml') return `${Math.round(grams)} g`;
+  return densityFor(it.food) === 1
+    ? `${Math.round(it.amount)} ml`
+    : `${Math.round(it.amount)} ml · ${Math.round(grams)} g`;
+}
+
 function makeEntry(food, grams, portionLabel = null) {
   return {
     id: uid(),
@@ -572,7 +608,9 @@ function BuildTab({ slot, date, toast, onClose }) {
   const [mealName, setMealName] = useState('');
 
   // Manual entry ("count it yourself") state.
-  const [manual, setManual] = useState({ name: '', grams: 100, kcal: '', protein: '', carbs: '', fat: '', fiber: '' });
+  const [manual, setManual] = useState({
+    name: '', grams: 100, unit: 'g', kcal: '', protein: '', carbs: '', fat: '', fiber: '',
+  });
 
   const allowed = useAllowedDiets();
   const matches = useMemo(() => {
@@ -581,22 +619,42 @@ function BuildTab({ slot, date, toast, onClose }) {
     return foods.filter((f) => allowed.includes(f.diet) && f.name.toLowerCase().includes(query)).slice(0, 8);
   }, [foods, q, allowed]);
 
+  /* Amount is kept in whatever unit the row is showing, and grams derived from
+     it, rather than the other way round. Storing grams and converting back for
+     display makes "150 ml" drift to 149 and then 148 as it round-trips through
+     a density that is not 1. */
+  const gramsOf = (it) => (it.unit === 'ml' ? mlToGrams(it.food, it.amount) : it.amount);
+
   const totals = useMemo(() => {
     const acc = {};
-    for (const { food, grams } of items) {
-      const v = nutrientsFor(food, grams);
+    for (const it of items) {
+      const v = nutrientsFor(it.food, gramsOf(it));
       for (const k of NUTRIENT_KEYS) acc[k] = (acc[k] || 0) + v[k];
     }
     return acc;
   }, [items]);
 
   const addToPlate = (food) => {
-    setItems((prev) => [...prev, { key: uid(), food, grams: food.servingGrams || 100 }]);
+    const grams = food.servingGrams || 100;
+    const unit = isLiquid(food) ? 'ml' : 'g';
+    setItems((prev) => [
+      ...prev,
+      { key: uid(), food, unit, amount: unit === 'ml' ? Math.round(gramsToMl(food, grams)) : grams },
+    ]);
     setQ('');
   };
 
+  /* Switching unit keeps the same real amount of food — flipping g to ml is a
+     change of measure, not of quantity. */
+  const setUnit = (i, unit) =>
+    setItems((prev) => prev.map((x, j) => {
+      if (j !== i) return x;
+      const grams = gramsOf(x);
+      return { ...x, unit, amount: unit === 'ml' ? Math.round(gramsToMl(x.food, grams)) : Math.round(grams) };
+    }));
+
   const commit = (alsoSave) => {
-    const entries = items.map(({ food, grams }) => makeEntry(food, grams));
+    const entries = items.map((it) => makeEntry(it.food, gramsOf(it), describeAmount(it)));
     dispatch({ type: 'addEntries', date, slot, entries });
     if (alsoSave && mealName.trim()) {
       dispatch({
@@ -605,7 +663,9 @@ function BuildTab({ slot, date, toast, onClose }) {
           id: uid(),
           name: mealName.trim(),
           slot,
-          items: items.map(({ food, grams }) => ({ foodId: food.id, name: food.name, grams, per100: food.per100 })),
+          items: items.map((it) => ({
+            foodId: it.food.id, name: it.food.name, grams: gramsOf(it), per100: it.food.per100,
+          })),
         },
       });
     }
@@ -614,6 +674,12 @@ function BuildTab({ slot, date, toast, onClose }) {
   };
 
   const commitManual = () => {
+    /* A hand-entered food has no composition to look a density up from, so a
+       millilitre is taken as a gram. That is right for anything water-like and
+       the only defensible guess for the rest — and it does not distort the
+       maths either way, because the same number is used to scale the portion
+       down to per-100 and back up again. The unit is kept so the diary reads
+       back in the measure it was entered in. */
     const grams = Number(manual.grams) || 100;
     const per100 = {};
     for (const k of NUTRIENT_KEYS) per100[k] = 0;
@@ -631,12 +697,16 @@ function BuildTab({ slot, date, toast, onClose }) {
       diet: state.profile.dietMode === 'nonveg' ? 'nonveg' : state.profile.dietMode,
       category: 'My foods',
       servingGrams: grams,
-      servingLabel: '1 serving',
+      // Reads back in the measure it was entered in — "1 serving (250 ml)".
+      servingLabel: `1 serving (${grams} ${manual.unit})`,
       per100,
     };
 
     dispatch({ type: 'addCustomFood', food });
-    dispatch({ type: 'addEntry', date, slot, entry: makeEntry(food, grams) });
+    dispatch({
+      type: 'addEntry', date, slot,
+      entry: makeEntry(food, grams, `${grams} ${manual.unit}`),
+    });
     toast(`${food.name} added and saved to your foods`);
     onClose();
   };
@@ -687,12 +757,19 @@ function BuildTab({ slot, date, toast, onClose }) {
                 <div key={it.key} className="flex items-center gap-2.5 p-2.5 rounded-2xl" style={{ background: 'var(--surface)' }}>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-medium truncate">{it.food.name}</div>
-                    <div className="text-[11px] text-faint tabular">{Math.round(nutrientsFor(it.food, it.grams).kcal)} kcal</div>
+                    <div className="text-[11px] text-faint tabular">
+                      {Math.round(nutrientsFor(it.food, gramsOf(it)).kcal)} kcal
+                      {it.unit === 'ml' && densityFor(it.food) !== 1 && (
+                        <span className="ml-1">· {Math.round(gramsOf(it))} g</span>
+                      )}
+                    </div>
                   </div>
+                  <UnitToggle unit={it.unit} onChange={(u) => setUnit(i, u)} />
                   <Stepper
-                    value={it.grams}
-                    onChange={(g) => setItems((prev) => prev.map((x, j) => (j === i ? { ...x, grams: g } : x)))}
-                    step={10} min={1} max={2000}
+                    value={it.amount}
+                    unit={it.unit}
+                    onChange={(v) => setItems((prev) => prev.map((x, j) => (j === i ? { ...x, amount: v } : x)))}
+                    step={10} min={1} max={5000}
                   />
                   <IconButton
                     name="x" label="Remove"
@@ -747,9 +824,16 @@ function BuildTab({ slot, date, toast, onClose }) {
           </Field>
 
           <div className="grid grid-cols-2 gap-3 mb-3">
-            <Field label="Portion size" suffix="g">
+            {/* Not a <Field>: its suffix slot is pointer-events-none and sits
+                inside a <label>, so a control placed there cannot be clicked
+                and would focus the input instead. */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[12px] font-medium text-dim">Portion size</span>
+                <UnitToggle unit={manual.unit} onChange={(unit) => setManual({ ...manual, unit })} />
+              </div>
               <NumberInput value={manual.grams} min={1} max={5000} fallback={100} onChange={(grams) => setManual({ ...manual, grams })} />
-            </Field>
+            </div>
             <Field label="Calories in that portion" suffix="kcal">
               <NumberInput placeholder="0" value={manual.kcal} allowEmpty min={0} max={10000} onChange={(kcal) => setManual({ ...manual, kcal })} />
             </Field>

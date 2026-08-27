@@ -329,6 +329,64 @@ const LIQUID_NAMES = /milk|shake|lassi|juice|coffee|tea|smoothie|frappe|water|bu
 
 const BOWL_CATEGORIES = new Set(['Prepared', 'Legumes']);
 
+/* ─────────────────────────────── Volume ───────────────────────────────
+ *
+ * Millilitres are what jugs, bottles and measuring cups are marked in, so a
+ * meal built from liquids should be enterable that way. Nutrition is stored
+ * per 100 g, though, so ml has to become grams — and the two are only equal
+ * for water.
+ *
+ * Most drinks are close enough to 1.0 that the difference is noise. The ones
+ * that are not are exactly the ones people measure by volume when cooking:
+ * a tablespoon of oil is 8% lighter than the same volume of water, and honey
+ * is 40% heavier. Getting those wrong is a real error in a recipe, so the few
+ * that matter are listed and everything else is water.
+ */
+const DENSITY = [
+  [/\boils?\b|olive oil|sunflower|groundnut|sesame oil|mustard oil|vanaspati|ghee|melted butter/i, 0.92],
+  [/honey|golden syrup|maple syrup|treacle|molasses/i, 1.42],
+  [/condensed milk/i, 1.29],
+  [/juice/i, 1.05],
+  [/milk|curd|yoghurt|yogurt|lassi|buttermilk|chaas|kefir|cream\b/i, 1.03],
+];
+
+/** Grams in one millilitre of this food. Water unless we know better. */
+export function densityFor(food) {
+  const name = food?.name || '';
+  const hit = DENSITY.find(([re]) => re.test(name));
+  return hit ? hit[1] : 1;
+}
+
+export const mlToGrams = (food, ml) => (Number(ml) || 0) * densityFor(food);
+export const gramsToMl = (food, grams) => (Number(grams) || 0) / densityFor(food);
+
+/**
+ * Is this something you would reach for a jug to measure?
+ *
+ * Used only to pick the *default* unit when an ingredient lands on the plate.
+ * Both units stay available for everything, because the guess will sometimes
+ * be wrong and being told "this one is grams only" is worse than a wrong
+ * default you can flip in one tap.
+ */
+const POURABLE = new RegExp(
+  [
+    '\\boils?\\b', '\\bghee\\b', 'vinegar', 'sauce', 'syrup', '\\bstock\\b', 'broth',
+    'juice', 'puree', '\\bmilk\\b', 'shake', 'lassi', 'smoothie', 'frappe',
+    '\\bwater\\b', 'buttermilk', 'chaas', '\\bcoffee\\b', '\\btea\\b', 'latte',
+    'americano', 'cappuccino', 'soda', '\\bcola\\b', 'lemonade', 'kombucha',
+  ].join('|'),
+  'i'
+);
+
+export function isLiquid(food) {
+  if (!food) return false;
+  /* Word boundaries throughout, and not LIQUID_NAMES: that pattern is only
+     ever applied inside a known-liquid category, so it can afford loose
+     substrings. Used unguarded it reads "steak" as tea, "watermelon" as
+     water and "boiled" as oil. */
+  return LIQUID_CATEGORIES.has(food.category) || POURABLE.test(food.name);
+}
+
 /**
  * Resolve the units for a food.
  * Always ends with a raw gram/ml option so nothing is un-loggable.
