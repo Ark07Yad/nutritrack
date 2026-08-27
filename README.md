@@ -50,7 +50,9 @@ macros, and a build-time audit rejects data that contradicts itself.
 
 **Asks for portions in the units food is sold in.** Pizza by the slice *and*
 the pie diameter, dal by the katori, momos by the momo, coffee by cup size,
-flour by the cup, turmeric by the teaspoon. Grams are always available too.
+flour by the cup, turmeric by the teaspoon. Grams and millilitres are always
+available too — and millilitres convert by density, so 100 ml of oil is 92 g
+and 100 ml of honey is 142 g, not 100 of each.
 
 **Tracks all 27 micronutrients.** 14 vitamins and 13 minerals, each against an
 RDA adjusted for your sex, age and life stage, each with an explanation of what
@@ -69,6 +71,14 @@ manually for anything the database does not have.
 **Tracks training.** 42 exercises with MET-based calorie burn, sets/reps/load
 for strength work, five ready-made training splits you can load straight into
 your log, and a weekly view of which muscle groups you have actually hit.
+
+**Turns steps into calories.** Your step count, goal, streak and next milestone
+sit on the training screen, next to what they should influence. Steps become
+distance, time and calories using your height and weight, at whichever of three
+walking paces you were actually going. The estimate is not silently added to
+your daily burn — steps and a logged walk are usually the same walk, and
+counting both would hand back calories you never spent — so there is a button
+to convert it into a session when it was genuinely separate.
 
 **Tracks streaks, honestly.** Logging, calories-on-target and step goals each
 keep their own run, with milestones from 3 days to 1000. A day only counts if
