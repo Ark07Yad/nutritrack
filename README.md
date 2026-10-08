@@ -298,7 +298,13 @@ Full detail, API reference and deployment notes:
 ## Notes
 
 - Light and dark themes are both first-class; accents route through semantic
-  tokens so contrast holds in either.
+  tokens so contrast holds in either, and secondary text clears 4.5:1 in both.
+- Usable from the keyboard: one visible focus ring throughout, sheets that
+  trap and return focus, arrow keys on segmented controls. Confirmations are
+  announced to screen readers, and all motion yields to
+  `prefers-reduced-motion`.
+- Controls keep their compact size but carry an extended tap area on touch
+  screens, so a thumb gets about 44px without the layout growing.
 - This gives general nutrition and training information. It is not medical
   advice and not a substitute for a doctor or registered dietitian.
 - Nutrient values are compiled from public composition tables and checked for
