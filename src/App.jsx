@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './lib/store';
 import { todayKey } from './lib/calc';
 import { useNutrition } from './lib/useNutrition';
@@ -13,6 +13,7 @@ import ProfileScreen from './components/Profile';
 import Streaks from './components/Streaks';
 import Cycle, { showCycle } from './components/Cycle';
 import { Icon, NudgeStack, Sheet, ThemeToggle, Toast } from './components/ui';
+import { installSpotlight } from './lib/motion';
 
 const NAV = [
   { id: 'home',     label: 'Home',      icon: 'home' },
@@ -45,6 +46,9 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState('');
   const [moreOpen, setMoreOpen] = useState(false);
 
+  // One pointer listener for every card in the app; a no-op on touch screens.
+  useEffect(() => installSpotlight(), []);
+
   if (!state.onboarded) return <Onboarding />;
 
   const navigate = (target, slot) => {
@@ -69,6 +73,13 @@ export default function App() {
    */
   const overflowNav = [...(cycleVisible ? [cycleNav] : []), ...SIDE_EXTRA];
   const inOverflow = overflowNav.some((item) => item.id === tab);
+
+  /* Where the highlight sits. It slides between items rather than jumping, so
+     moving through the app reads as travelling along one bar instead of five
+     unrelated buttons lighting up. -1 hides it, which only happens if the tab
+     you are on has just stopped existing. */
+  const barIndex = inOverflow ? NAV.length : NAV.findIndex((item) => item.id === tab);
+  const sideIndex = allNav.findIndex((item) => item.id === tab);
 
   /** Reminder banners are actionable, not just informational. */
   const actOnNudge = (n) => {
@@ -95,19 +106,30 @@ export default function App() {
             <span className="text-[15px] font-semibold tracking-tight">NutriTrack</span>
           </div>
 
-          <nav className="flex flex-col gap-1">
+          <nav className="relative flex flex-col gap-1" aria-label="Main">
+            {sideIndex >= 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-10 rounded-2xl bg-brand-500/12 pointer-events-none"
+                style={{
+                  // Rows are a fixed 2.5rem with a 0.25rem gap, so the offset is exact.
+                  transform: `translateY(${sideIndex * 2.75}rem)`,
+                  transition: 'transform 320ms var(--ease-out)',
+                }}
+              />
+            )}
             {allNav.map((item) => (
               <button
                 key={item.id}
                 onClick={() => navigate(item.id)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl text-[13.5px] font-medium transition-all
+                aria-current={tab === item.id ? 'page' : undefined}
+                className={`relative flex items-center gap-3 px-3 h-10 rounded-2xl text-[13.5px] font-medium transition-colors duration-200
                   ${tab === item.id
-                    ? 'bg-brand-500/12 text-good'
+                    ? 'text-good'
                     : 'text-dim hover:[background:var(--surface)] hover:text-[color:var(--text)]'}`}
               >
                 <Icon name={item.icon} className="size-[18px]" />
                 {item.label}
-                {tab === item.id && <span className="ml-auto size-1.5 rounded-full bg-brand-400" />}
               </button>
             ))}
           </nav>
@@ -148,19 +170,32 @@ export default function App() {
       </div>
 
       {/* ── Bottom nav (mobile) ── */}
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-3 pt-2"
+      <nav aria-label="Main" className="lg:hidden fixed bottom-0 inset-x-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2"
            style={{ background: 'linear-gradient(to top, var(--bg) 62%, transparent)' }}>
-        <div className="surface rounded-3xl flex justify-around p-1.5" style={{ background: 'var(--bg-elev)' }}>
+        {/* A grid, not justify-around: equal columns are what let the highlight
+            move by exactly one column per item. */}
+        <div className="surface rounded-3xl relative grid grid-cols-6 p-1.5" style={{ background: 'var(--bg-elev)' }}>
+          {barIndex >= 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute top-1.5 bottom-1.5 left-1.5 rounded-2xl bg-brand-500/12 pointer-events-none"
+              style={{
+                width: 'calc((100% - 0.75rem) / 6)',
+                transform: `translateX(${barIndex * 100}%)`,
+                transition: 'transform 320ms var(--ease-out)',
+              }}
+            />
+          )}
           {NAV.map((item) => (
             <button
               key={item.id}
               onClick={() => navigate(item.id)}
               aria-current={tab === item.id ? 'page' : undefined}
-              className={`flex flex-col items-center gap-1 px-2 py-2 rounded-2xl transition-all active:scale-90
-                ${tab === item.id ? 'text-good' : 'text-faint'}`}
+              className={`relative flex flex-col items-center gap-1 py-2 min-w-0 rounded-2xl transition-[color,scale] duration-200 active:scale-90
+                ${tab === item.id ? 'text-good' : 'text-dim'}`}
             >
-              <Icon name={item.icon} className="size-[19px]" />
-              <span className="text-[9.5px] font-medium">{item.label}</span>
+              <Icon name={item.icon} className="size-5" />
+              <span className="text-[11px] font-medium leading-none">{item.label}</span>
             </button>
           ))}
 
@@ -168,18 +203,11 @@ export default function App() {
             onClick={() => setMoreOpen(true)}
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
-            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-2xl transition-all active:scale-90
-              ${inOverflow ? 'text-good' : 'text-faint'}`}
+            className={`relative flex flex-col items-center gap-1 py-2 min-w-0 rounded-2xl transition-[color,scale] duration-200 active:scale-90
+              ${inOverflow ? 'text-good' : 'text-dim'}`}
           >
-            <span className="relative grid place-items-center size-[19px]">
-              <Icon name="menu" className="size-[19px]" />
-              {/* A dot when you are on one of the screens hidden in here, so the
-                  bar still says where you are. */}
-              {inOverflow && (
-                <span className="absolute -top-0.5 -right-1 size-1.5 rounded-full bg-brand-400" />
-              )}
-            </span>
-            <span className="text-[9.5px] font-medium">More</span>
+            <Icon name="menu" className="size-5" />
+            <span className="text-[11px] font-medium leading-none">More</span>
           </button>
         </div>
       </nav>
@@ -221,7 +249,7 @@ function SidebarSummary({ date }) {
 
   return (
     <div className="surface rounded-3xl p-4">
-      <div className="text-[10.5px] uppercase tracking-wider text-faint">Today</div>
+      <div className="text-[11px] uppercase tracking-wider text-faint">Today</div>
       <div className="text-2xl font-semibold tabular mt-1.5">
         {Math.round(n.totals.kcal)}
         <span className="text-[12px] font-normal text-faint ml-1">/ {Math.round(n.plan.target)}</span>
@@ -233,7 +261,7 @@ function SidebarSummary({ date }) {
       <div className="grid grid-cols-3 gap-1.5 mt-3 text-center">
         {[['P', n.totals.protein, n.macros.protein], ['C', n.totals.carbs, n.macros.carbs], ['F', n.totals.fat, n.macros.fat]].map(([l, v, t]) => (
           <div key={l}>
-            <div className="text-[9.5px] text-faint">{l}</div>
+            <div className="text-[11px] text-faint">{l}</div>
             <div className="text-[11.5px] font-medium tabular">{Math.round(v)}<span className="text-faint">/{t}</span></div>
           </div>
         ))}

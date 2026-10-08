@@ -5,7 +5,7 @@ import { useNutrition } from '../lib/useNutrition';
 import { MEAL_SLOTS } from '../data/recipes';
 import { prettyDate, shortDay, isToday } from '../lib/calc';
 import { analyze } from '../lib/coach';
-import { AnimatedNumber, Bar, Button, Card, Icon, Ring, SectionTitle, Stat, Badge, fmt, stagger } from './ui';
+import { AnimatedNumber, Bar, Button, Card, Icon, Ring, SectionTitle, Stat, Badge, fmt, stagger, TileIcon } from './ui';
 import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceLine } from 'recharts';
 
 export default function Dashboard({ date, onNavigate }) {
@@ -99,7 +99,7 @@ export default function Dashboard({ date, onNavigate }) {
                 className="surface rounded-3xl p-4 text-left transition-all hover:[background:var(--surface-hover)] active:scale-[0.98] group animate-rise"
               >
                 <div className="flex items-center justify-between mb-2.5">
-                  <span className="text-lg">{slot.icon}</span>
+                  <TileIcon name={slot.icon} tone={slot.tone} />
                   <Icon name="plus" className="size-4 text-faint group-hover:text-good transition-colors" />
                 </div>
                 <div className="text-[13px] font-medium">{slot.label}</div>
@@ -194,7 +194,7 @@ function MiniStat({ label, value, icon, tone = 'default' }) {
   const tones = { default: '', brand: 'text-good', flame: 'text-flame' };
   return (
     <div className="rounded-2xl px-3 py-2.5" style={{ background: 'var(--surface)' }}>
-      <div className="flex items-center gap-1 text-[10.5px] uppercase tracking-wider text-faint">
+      <div className="flex items-center gap-1 text-[11px] uppercase tracking-wider text-faint">
         <Icon name={icon} className="size-3" /> {label}
       </div>
       <div className={`text-[17px] font-semibold tabular mt-1 ${tones[tone]}`}>
@@ -220,7 +220,7 @@ export function InsightRow({ insight, index = 0 }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[13.5px] font-medium">{insight.title}</span>
-          {insight.tag && <span className="text-[10px] uppercase tracking-wider text-faint">{insight.tag}</span>}
+          {insight.tag && <span className="text-[11px] uppercase tracking-wider text-faint">{insight.tag}</span>}
         </div>
         <p className="text-[12.5px] text-dim mt-1 leading-relaxed">{insight.body}</p>
       </div>
@@ -241,14 +241,14 @@ function WaterCard({ day, date, target, dispatch }) {
         <div className="flex gap-1">
           <button
             onClick={() => dispatch({ type: 'setDayField', date, field: 'water', value: Math.max(0, glasses - 1) })}
-            className="size-6 rounded-lg grid place-items-center text-faint hover:text-[color:var(--text)] hover:[background:var(--border)] active:scale-90 transition"
+            className="hit size-8 rounded-xl grid place-items-center text-dim hover:text-[color:var(--text)] hover:[background:var(--border)] active:scale-90 transition"
             aria-label="Remove a glass"
-          ><Icon name="minus" className="size-3" /></button>
+          ><Icon name="minus" className="size-4" /></button>
           <button
             onClick={() => dispatch({ type: 'setDayField', date, field: 'water', value: glasses + 1 })}
-            className="size-6 rounded-lg grid place-items-center text-info hover:bg-sky-500/15 active:scale-90 transition"
+            className="hit size-8 rounded-xl grid place-items-center text-info bg-sky-500/10 hover:bg-sky-500/20 active:scale-90 transition"
             aria-label="Add a glass"
-          ><Icon name="plus" className="size-3" /></button>
+          ><Icon name="plus" className="size-4" /></button>
         </div>
       </div>
       <div className="text-[22px] font-semibold tabular leading-none mt-1.5 text-info">

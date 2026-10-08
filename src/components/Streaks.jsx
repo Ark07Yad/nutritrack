@@ -6,7 +6,7 @@ import {
   milestoneBlurb, MILESTONES,
 } from '../lib/streaks';
 import { todayKey, prettyDate } from '../lib/calc';
-import { AnimatedNumber, Badge, Card, Icon, NumberInput, SectionTitle, stagger } from './ui';
+import { AnimatedNumber, Badge, Card, Icon, NumberInput, SectionTitle, stagger, TileIcon } from './ui';
 
 const KINDS = {
   logging:  { label: 'Logging',  icon: 'book',  tone: 'iris',  desc: 'Days you recorded something' },
@@ -79,7 +79,7 @@ export default function Streaks({ date = todayKey() }) {
             <button
               key={v}
               onClick={() => dispatch({ type: 'setDayField', date, field: 'steps', value: v })}
-              className="px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
+              className="hit px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
             >
               {v.toLocaleString()}
             </button>
@@ -129,7 +129,7 @@ function StreakCard({ meta, streak, pattern, index }) {
             </span>
           </div>
         </div>
-        {current > 0 && <span className="text-xl" aria-hidden="true">🔥</span>}
+        {current > 0 && <TileIcon name="flame" tone="flame" />}
       </div>
 
       {/* Last fortnight, as dots. Reading a pattern beats reading a number. */}

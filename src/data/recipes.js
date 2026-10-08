@@ -11,10 +11,10 @@ import { FOODS } from './foods';
 const byName = new Map(FOODS.map((f) => [f.name, f]));
 
 export const MEAL_SLOTS = [
-  { id: 'breakfast', label: 'Breakfast', icon: '🌅', share: 0.25 },
-  { id: 'lunch',     label: 'Lunch',     icon: '☀️', share: 0.35 },
-  { id: 'snack',     label: 'Snack',     icon: '🍎', share: 0.15 },
-  { id: 'dinner',    label: 'Dinner',    icon: '🌙', share: 0.25 },
+  { id: 'breakfast', label: 'Breakfast', icon: 'sunrise', tone: 'flame', share: 0.25 },
+  { id: 'lunch',     label: 'Lunch',     icon: 'sun',     tone: 'warn',  share: 0.35 },
+  { id: 'snack',     label: 'Snack',     icon: 'apple',   tone: 'bad',   share: 0.15 },
+  { id: 'dinner',    label: 'Dinner',    icon: 'moon',    tone: 'iris',  share: 0.25 },
 ];
 
 const RAW = [

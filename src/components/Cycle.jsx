@@ -166,9 +166,9 @@ export default function Cycle() {
                   style={stagger(i, { step: 20, max: 180 })}
                   onClick={() => setCycle(togglePeriodStart(cycle, d))}
                   title="Remove this date"
-                  className="px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-bad transition-colors animate-rise"
+                  className="hit px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-bad transition-colors animate-rise"
                 >
-                  {prettyDate(d)} ✕
+                  {prettyDate(d)} <Icon name="x" className="size-3 inline -mt-px ml-0.5" />
                 </button>
               ))}
             </div>

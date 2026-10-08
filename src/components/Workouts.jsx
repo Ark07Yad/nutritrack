@@ -112,7 +112,7 @@ export default function Workouts({ date, setDate, toast }) {
                 </div>
                 <div className="text-right shrink-0">
                   <div className="text-[14px] font-semibold tabular text-flame">{Math.round(w.kcal)}</div>
-                  <div className="text-[9.5px] text-faint">kcal</div>
+                  <div className="text-[11px] text-faint">kcal</div>
                 </div>
                 <IconButton
                   name="trash" label="Remove"
@@ -233,9 +233,13 @@ function StepsCard({ date, toast }) {
       <SectionTitle
         icon="bolt"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-end gap-1.5 flex-wrap">
             {streak.current > 0 && (
-              <Badge tone="warn">{streak.current}-day streak</Badge>
+              <Badge tone="warn">
+                <Icon name="flame" className="size-3" />
+                <span className="sr-only">Streak: </span>
+                {streak.current} day{streak.current === 1 ? '' : 's'}
+              </Badge>
             )}
             <Badge tone={steps >= goal ? 'good' : 'neutral'}>goal {goal.toLocaleString()}</Badge>
           </div>
@@ -292,9 +296,9 @@ function StepsCard({ date, toast }) {
             ['Burned', Math.round(walk.kcal), 'kcal'],
           ].map(([label, value, unit]) => (
             <div key={label} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
-              <div className="text-[10px] uppercase tracking-wider text-faint">{label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-faint">{label}</div>
               <div className="text-[17px] font-semibold tabular mt-1">
-                {value}<span className="text-[10px] text-faint ml-0.5">{unit}</span>
+                {value}<span className="text-[11px] text-faint ml-0.5">{unit}</span>
               </div>
             </div>
           ))}
@@ -452,7 +456,7 @@ function ExercisePicker({ date, onClose, toast, weight }) {
             <Input autoFocus placeholder="Search exercises or muscle groups…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-10" />
           </div>
 
-          <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3">
+          <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pt-1.5 -mt-1.5 pb-2 mb-3 -mx-1 px-1">
             <Chip active={type === 'all'} onClick={() => setType('all')}>All</Chip>
             {EXERCISE_TYPES.map((t) => (
               <Chip key={t} active={type === t} onClick={() => setType(t)} className="capitalize">{t}</Chip>
@@ -475,7 +479,7 @@ function ExercisePicker({ date, onClose, toast, weight }) {
                   <div className="text-[13px] font-semibold tabular text-flame">
                     {Math.round(burnFor(e, 30, weight))}
                   </div>
-                  <div className="text-[9.5px] text-faint">kcal/30min</div>
+                  <div className="text-[11px] text-faint">kcal/30min</div>
                 </div>
               </button>
             ))}

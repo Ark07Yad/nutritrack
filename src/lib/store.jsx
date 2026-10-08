@@ -15,6 +15,7 @@ import { DEFAULT_REMINDERS, runReminderTick, registerServiceWorker } from './rem
 import { DEFAULT_CYCLE } from './cycle';
 import { syncPrefs } from './push';
 import * as persist from './persist';
+import { withViewTransition } from './motion';
 
 export const emptyDay = () => ({
   meals: { breakfast: [], lunch: [], snack: [], dinner: [] },
@@ -400,20 +401,32 @@ export function StoreProvider({ children }) {
    * listener matters, because otherwise switching your Mac to dark at sunset
    * would leave the app bright until a reload.
    */
+  const settled = useRef(false);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const apply = () => {
       const resolved = state.theme === 'system' ? (mq.matches ? 'dark' : 'light') : state.theme;
-      document.documentElement.dataset.theme = resolved;
-      // Keep the mobile browser chrome in step with the page.
-      document.querySelector('meta[name="theme-color"]')
-        ?.setAttribute('content', resolved === 'dark' ? '#03100b' : '#eef5f0');
+      const root = document.documentElement;
+      const swap = () => {
+        root.dataset.theme = resolved;
+        // Keep the mobile browser chrome in step with the page background.
+        document.querySelector('meta[name="theme-color"]')
+          ?.setAttribute('content', resolved === 'dark' ? '#0b0d0c' : '#f6f7f7');
+      };
+      /* Cross-fade only a change the person made. index.html ships with
+         data-theme="dark", so someone whose saved theme is bright would
+         otherwise get a fade from dark on every launch — and the same again
+         when the stored state arrives. Startup snaps; everything after it
+         fades. */
+      if (settled.current && root.dataset.theme !== resolved) withViewTransition(swap);
+      else swap();
     };
     apply();
+    if (ready) settled.current = true;
     if (state.theme !== 'system') return;
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
-  }, [state.theme]);
+  }, [state.theme, ready]);
 
   /* ── Reminders ── */
   const remindersEnabled = state.reminders?.enabled;

@@ -1,9 +1,9 @@
 /** Shared visual primitives. Everything is inline SVG or CSS — no icon deps. */
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { formatGrams } from '../data/portions';
 import { createPortal } from 'react-dom';
-import { useCountUp, stagger } from '../lib/motion';
+import { useCountUp, stagger, haptic, prefersReducedMotion } from '../lib/motion';
 
 export { stagger };
 
@@ -46,6 +46,16 @@ export const Icon = ({ name, className = 'size-5', ...rest }) => {
     moon:      <P d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />,
     clock:     <><circle cx="12" cy="12" r="8.5" /><P d="M12 7.5V12l3 2" /></>,
     menu:      <P d="M4 7h16M4 12h16M4 17h16" />,
+    /* These replace emoji. An emoji is drawn by the operating system, so the
+       same meal card showed a different picture on every platform and none of
+       them matched the line icons beside it — or took the theme's colour. */
+    sunrise:   <><P d="M12 3.5V6M5.3 8.3 7 10M18.7 8.3 17 10M2.5 16H5M19 16h2.5M3 20h18" /><P d="M7.5 16a4.5 4.5 0 0 1 9 0" /></>,
+    apple:     <><P d="M12 8c-1.5-1.3-3.9-1.5-5.6.1-2 2-1.8 5.9.2 9.2 1.3 2.1 2.7 2.9 4 2.4.9-.3 1.9-.3 2.8 0 1.3.5 2.7-.3 4-2.4 2-3.3 2.2-7.2.2-9.2-1.7-1.6-4.1-1.4-5.6-.1z" /><P d="M12 8c0-2 .9-3.4 2.8-4.2" /></>,
+    trendUp:   <><P d="M3 17l6.5-6.5 4 4L21 7" /><P d="M15.5 7H21v5.5" /></>,
+    trendDown: <><P d="M3 7l6.5 6.5 4-4L21 17" /><P d="M15.5 17H21v-5.5" /></>,
+    refresh:   <><P d="M20 11A8 8 0 0 0 5.8 6.8L4 8.5M4 4.5v4h4" /><P d="M4 13a8 8 0 0 0 14.2 4.2L20 15.5M20 19.5v-4h-4" /></>,
+    sprout:    <><P d="M12 21v-8.5" /><P d="M12 12.5c0-3.6-2.6-6-7-6 0 4 2.6 6 7 6z" /><P d="M12 15c0-3.2 2.3-5.5 7-5.5 0 3.6-2.3 5.5-7 5.5z" /></>,
+    drumstick: <><P d="M15.4 15.63a7.875 6 135 1 1 6.23-6.23 4.5 3.43 135 0 0-6.23 6.23" /><P d="m8.29 12.71-2.6 2.6a2.5 2.5 0 1 0-1.65 4.65A2.5 2.5 0 1 0 8.7 18.3l2.59-2.59" /></>,
   };
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
@@ -55,12 +65,38 @@ export const Icon = ({ name, className = 'size-5', ...rest }) => {
   );
 };
 
+/**
+ * An icon on a tile tinted with its own colour.
+ *
+ * Used where emoji used to stand in for icons. The classes are spelled out in
+ * a lookup rather than built from the tone name, because Tailwind only emits
+ * utilities it can find written in full in the source.
+ */
+const TILE_TONE = {
+  good: 'text-good', warn: 'text-warn', bad: 'text-bad',
+  info: 'text-info', iris: 'text-iris', flame: 'text-flame', dim: 'text-dim',
+};
+
+export function TileIcon({ name, tone = 'good', size = 'md', className = '' }) {
+  const box = size === 'lg' ? 'size-10 rounded-2xl' : size === 'sm' ? 'size-7 rounded-lg' : 'size-8 rounded-xl';
+  const glyph = size === 'lg' ? 'size-5' : size === 'sm' ? 'size-4' : 'size-[18px]';
+  return (
+    <span
+      aria-hidden="true"
+      className={`grid place-items-center shrink-0 ${box} ${TILE_TONE[tone] || TILE_TONE.good} ${className}`}
+      style={{ background: 'color-mix(in srgb, currentColor 14%, transparent)' }}
+    >
+      <Icon name={name} className={glyph} />
+    </span>
+  );
+}
+
 /* ────────────────────────────────  Layout  ─────────────────────────────── */
 
 export function Card({ className = '', children, glow = false, ...rest }) {
   return (
     <div
-      className={`surface rounded-3xl relative overflow-hidden ${className}`}
+      className={`surface spotlight rounded-3xl relative overflow-hidden ${className}`}
       {...rest}
     >
       {glow && (
@@ -75,7 +111,7 @@ export function Card({ className = '', children, glow = false, ...rest }) {
 export function SectionTitle({ icon, children, action }) {
   return (
     <div className="flex items-center justify-between gap-3 mb-3">
-      <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.14em] text-dim">
+      <h2 className="flex items-center gap-2 shrink-0 whitespace-nowrap text-[13px] font-semibold uppercase tracking-[0.14em] text-dim">
         {icon && <Icon name={icon} className="size-4" />}
         {children}
       </h2>
@@ -101,7 +137,7 @@ export function Button({ variant = 'ghost', className = '', size = 'md', childre
   const sizes = { sm: 'px-3 py-1.5 text-[13px] rounded-xl', md: 'px-4 py-2.5 text-sm rounded-2xl', lg: 'px-6 py-3.5 text-[15px] rounded-2xl' };
   return (
     <button
-      className={`inline-flex items-center justify-center gap-2 transition-all duration-200
+      className={`hit inline-flex items-center justify-center gap-2 transition-all duration-200
                   active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none
                   ${sizes[size]} ${VARIANTS[variant]} ${className}`}
       {...rest}
@@ -116,7 +152,7 @@ export function IconButton({ name, label, className = '', ...rest }) {
     <button
       aria-label={label}
       title={label}
-      className={`grid place-items-center size-9 rounded-xl text-dim transition-all
+      className={`hit grid place-items-center size-9 rounded-xl text-dim transition-all
                   hover:[background:var(--surface-hover)] hover:text-[color:var(--text)]
                   active:scale-90 ${className}`}
       {...rest}
@@ -248,8 +284,60 @@ export function Select({ className = '', children, ...rest }) {
 }
 
 export function Segmented({ options, value, onChange, className = '' }) {
+  const wrap = useRef(null);
+  const [thumb, setThumb] = useState(null);
+
+  /* The highlight slides between options instead of blinking from one to the
+     next, which is what tells you the three are positions of one control.
+     Options are different widths, so it has to be measured — and re-measured
+     when the web font arrives or the row is resized. */
+  useLayoutEffect(() => {
+    const el = wrap.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const active = el.querySelector('[aria-selected="true"]');
+      const next = active && active.offsetWidth ? { left: active.offsetLeft, width: active.offsetWidth } : null;
+      setThumb((prev) =>
+        prev?.left === next?.left && prev?.width === next?.width ? prev : next
+      );
+    };
+    measure();
+    if (typeof ResizeObserver === 'undefined') return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    for (const child of el.children) ro.observe(child);
+    return () => ro.disconnect();
+  }, [value, options.length]);
+
+  // Arrow keys move between options, as they do on any native tab strip.
+  const onKeyDown = (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const i = options.findIndex((o) => o.value === value);
+    if (i < 0) return;
+    e.preventDefault();
+    const next = options[(i + (e.key === 'ArrowRight' ? 1 : options.length - 1)) % options.length];
+    onChange(next.value);
+    requestAnimationFrame(() => wrap.current?.querySelector('[aria-selected="true"]')?.focus());
+  };
+
   return (
-    <div className={`inline-flex p-1 rounded-2xl surface gap-1 ${className}`} role="tablist">
+    <div
+      ref={wrap}
+      className={`relative inline-flex p-1 rounded-2xl surface gap-1 ${className}`}
+      role="tablist"
+      onKeyDown={onKeyDown}
+    >
+      {thumb && (
+        <span
+          aria-hidden="true"
+          className="absolute top-1 bottom-1 left-0 rounded-xl metal pointer-events-none"
+          style={{
+            width: thumb.width,
+            transform: `translateX(${thumb.left}px)`,
+            transition: 'transform 280ms var(--ease-out), width 280ms var(--ease-out)',
+          }}
+        />
+      )}
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -258,12 +346,15 @@ export function Segmented({ options, value, onChange, className = '' }) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(o.value)}
-            className={`relative px-3.5 py-1.5 rounded-xl text-[13px] font-medium transition-all duration-200 whitespace-nowrap
+            /* Until the highlight has been measured the active option paints
+               its own background, so the control is never without one. */
+            className={`hit relative z-[1] inline-flex items-center px-3.5 py-1.5 rounded-xl text-[13px] font-medium
+                        border border-transparent transition-colors duration-200 whitespace-nowrap
                         ${active
-                          ? 'metal '
+                          ? thumb ? 'text-[color:var(--metal-text)]' : 'metal'
                           : 'text-dim hover:text-[color:var(--text)]'}`}
           >
-            {o.icon && <span className="mr-1">{o.icon}</span>}
+            {o.icon && <span className="mr-1.5 inline-flex">{o.icon}</span>}
             {o.label}
           </button>
         );
@@ -275,7 +366,7 @@ export function Segmented({ options, value, onChange, className = '' }) {
 export function Chip({ active, children, className = '', ...rest }) {
   return (
     <button
-      className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95
+      className={`hit px-3 py-1.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-all active:scale-95
                   ${active
                     ? 'bg-brand-500/18 text-good border border-brand-400/35'
                     : 'surface text-dim hover:text-[color:var(--text)]'} ${className}`}
@@ -427,22 +518,126 @@ export function Stat({ label, value, unit, tone = 'default', icon, sub }) {
 
 /* ─────────────────────────────  Sheet / modal  ─────────────────────────── */
 
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Sheet({ open, onClose, title, subtitle, children, size = 'md' }) {
   const ref = useRef(null);
+  const titleId = useId();
+  const timer = useRef(0);
+  const drag = useRef(null);
+  const [leaving, setLeaving] = useState(null); // null | 'fade' | 'drag'
+  const [dragY, setDragY] = useState(0);
+
+  /* What had focus when the sheet was asked to open, noted during render.
+     An effect is too late: a field with autoFocus inside the sheet claims
+     focus as it mounts, before any effect runs, so by then "the thing that
+     had focus" is the sheet's own input and there is nothing to go back to. */
+  const [wasOpen, setWasOpen] = useState(false);
+  const [opener, setOpener] = useState(null);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setOpener(typeof document === 'undefined' ? null : document.activeElement);
+  }
+
+  /* Closing plays a short exit, but the exit never decides whether the sheet
+     closes: onClose is called from a timer, not from an animation event, so a
+     hidden tab or a reduced-motion setting cannot leave it stuck open. */
+  const dismiss = useCallback((how = 'fade') => {
+    if (timer.current) return;
+    if (prefersReducedMotion() || document.visibilityState === 'hidden') {
+      onClose();
+      return;
+    }
+    setLeaving(how);
+    timer.current = setTimeout(() => {
+      timer.current = 0;
+      setLeaving(null);
+      setDragY(0);
+      onClose();
+    }, 160);
+  }, [onClose]);
+
+  useEffect(() => () => clearTimeout(timer.current), []);
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => e.key === 'Escape' && onClose();
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        dismiss();
+        return;
+      }
+      // Keep Tab inside the sheet — behind it is a page you cannot see.
+      if (e.key !== 'Tab' || !ref.current) return;
+      const items = ref.current.querySelectorAll(FOCUSABLE);
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const at = document.activeElement;
+      if (e.shiftKey && (at === first || at === ref.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && at === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [open, onClose]);
+  }, [open, dismiss]);
+
+  /* Focus moves into the sheet when it opens and back to whatever opened it
+     when it closes. Keyed on `open` alone: callers pass a fresh onClose every
+     render, and re-running this on each one would yank focus around while you
+     type. */
+  useEffect(() => {
+    if (!open) return undefined;
+    const node = ref.current;
+    // A field with autoFocus inside the sheet has already claimed it.
+    if (node && !node.contains(document.activeElement)) node.focus({ preventScroll: true });
+    return () => {
+      if (opener instanceof HTMLElement && opener !== document.body && document.contains(opener)) {
+        opener.focus({ preventScroll: true });
+      }
+    };
+  }, [open, opener]);
 
   if (!open) return null;
   const widths = { sm: 'sm:max-w-md', md: 'sm:max-w-2xl', lg: 'sm:max-w-4xl' };
+
+  /* Drag the header down to dismiss, as every phone sheet does. Only the
+     header listens, so the scrolling body below keeps its own gesture, and a
+     press that starts on the close button is left alone — capturing that
+     pointer would redirect the click away from the button. */
+  const onPointerDown = (e) => {
+    if (e.pointerType === 'mouse' || e.target.closest('button')) return;
+    drag.current = { y: e.clientY, at: performance.now() };
+    // Capture keeps the drag alive when the finger leaves the header. It
+    // throws if the pointer has already gone, and the drag works without it.
+    try {
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* no capture; moves still arrive while the finger is over the header */
+    }
+  };
+  const onPointerMove = (e) => {
+    if (!drag.current) return;
+    setDragY(Math.max(0, e.clientY - drag.current.y));
+  };
+  const onPointerEnd = (e) => {
+    if (!drag.current) return;
+    const dy = Math.max(0, e.clientY - drag.current.y);
+    const speed = dy / Math.max(1, performance.now() - drag.current.at);
+    drag.current = null;
+    if (dy > 110 || (dy > 40 && speed > 0.6)) dismiss('drag');
+    else setDragY(0);
+  };
+
+  const dragging = dragY > 0 && !leaving;
 
   // Portalled to <body>: any ancestor with a transform (our page-transition
   // animation, for one) would otherwise become the containing block for
@@ -450,24 +645,45 @@ export function Sheet({ open, onClose, title, subtitle, children, size = 'md' })
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/55 backdrop-blur-sm animate-[pop_0.2s_ease-out]"
-        onClick={onClose}
+        className={`absolute inset-0 bg-black/55 backdrop-blur-sm ${leaving ? 'animate-fade-out' : 'animate-[pop_0.2s_ease-out]'}`}
+        style={dragging ? { opacity: Math.max(0.25, 1 - dragY / 420) } : undefined}
+        onClick={() => dismiss()}
       />
       <div
         ref={ref}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
         className={`relative w-full ${widths[size]} max-h-[92dvh] sm:max-h-[86dvh] flex flex-col
-                    rounded-t-3xl sm:rounded-3xl surface animate-rise
-                    sm:mx-4`}
-        style={{ background: 'var(--bg-elev)' }}
+                    rounded-t-3xl sm:rounded-3xl surface outline-none sm:mx-4
+                    ${leaving === 'fade' ? 'animate-sheet-out' : 'animate-sheet-in'}`}
+        style={{
+          background: 'var(--bg-elev)',
+          /* `translate`, not `transform`: the entrance animation holds
+             transform at its final value, and an inline transform would lose
+             to it. The two properties compose. */
+          translate: leaving === 'drag' ? '0 100%' : `0 ${dragY}px`,
+          transition: dragging ? 'none' : 'translate 180ms var(--ease-out)',
+        }}
       >
-        <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-hair shrink-0">
+        <div
+          className="relative flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-hair shrink-0 touch-none sm:touch-auto"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
+        >
+          <span
+            aria-hidden="true"
+            className="sm:hidden absolute top-2 left-1/2 -translate-x-1/2 h-1 w-9 rounded-full"
+            style={{ background: 'var(--border-strong)' }}
+          />
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold truncate">{title}</h3>
+            <h3 id={titleId} className="text-lg font-semibold truncate">{title}</h3>
             {subtitle && <p className="text-[12.5px] text-dim mt-0.5">{subtitle}</p>}
           </div>
-          <IconButton name="x" label="Close" onClick={onClose} />
+          <IconButton name="x" label="Close" onClick={() => dismiss()} />
         </div>
         <div className="overflow-y-auto overscroll-contain px-5 py-4 flex-1">{children}</div>
       </div>
@@ -506,7 +722,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
             <button
               key={u.id}
               onClick={() => onChange({ unitId: u.id, count: u.raw ? 100 : 1 })}
-              className={`px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-all active:scale-95 border
+              className={`hit px-3 py-1.5 rounded-full text-[12.5px] font-medium transition-all active:scale-95 border
                 ${u.id === unit.id
                   ? 'bg-brand-500/15 text-good border-brand-400/40'
                   : 'border-hair text-dim hover:text-[color:var(--text)] hover:[background:var(--surface-hover)]'}`}
@@ -514,7 +730,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
               title={u.note || ''}
             >
               {u.label}
-              {u.note && <span className="ml-1.5 text-[10.5px] text-faint">{u.note}</span>}
+              {u.note && <span className="ml-1.5 text-[11px] text-faint">{u.note}</span>}
             </button>
           ))}
         </div>
@@ -527,7 +743,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
             <div className="text-[17px] font-semibold tabular leading-none">
               {raw ? Math.round(count) : +count.toFixed(2)}
             </div>
-            <div className="text-[10px] text-faint mt-0.5">{unit.label}</div>
+            <div className="text-[11px] text-faint mt-0.5">{unit.label}</div>
           </div>
           <IconButton name="plus" label="More" onClick={() => bump(1)} className="size-9" />
         </div>
@@ -538,7 +754,7 @@ export function PortionPicker({ units, unitId, count, onChange }) {
               <button
                 key={c}
                 onClick={() => onChange({ unitId: unit.id, count: c })}
-                className={`size-9 rounded-xl text-[13px] font-semibold tabular transition-all active:scale-90 border
+                className={`hit size-9 rounded-xl text-[13px] font-semibold tabular transition-all active:scale-90 border
                   ${count === c ? 'bg-brand-500/15 text-good border-brand-400/40' : 'border-hair text-dim'}`}
                 style={count === c ? undefined : { background: 'var(--surface)' }}
               >
@@ -580,7 +796,7 @@ export function ThemeToggle({ theme, onChange, compact = false, className = '' }
       title={`${current.label} — tap for ${meta[next].label}`}
       className={`${
         compact
-          ? 'size-9 rounded-xl grid place-items-center text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)] active:scale-90'
+          ? 'hit size-9 rounded-xl grid place-items-center text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)] active:scale-90'
           : 'w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-[13.5px] font-medium text-dim transition-all hover:[background:var(--surface)] hover:text-[color:var(--text)]'
       } ${className}`}
     >
@@ -618,7 +834,7 @@ export function Badge({ tone = 'neutral', children, className = '' }) {
     iris: 'bg-indigo-500/14 text-iris border-indigo-400/25',
   };
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border ${tones[tone]} ${className}`}>
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border whitespace-nowrap ${tones[tone]} ${className}`}>
       {children}
     </span>
   );
@@ -631,9 +847,19 @@ export function Toast({ message, onDone }) {
     return () => clearTimeout(t);
   }, [message, onDone]);
 
+  /* Its own effect, keyed on the message alone. The caller passes a new
+     onDone on every render, so sharing the effect above would buzz the phone
+     again each time anything else on the page re-rendered. */
+  useEffect(() => {
+    if (message) haptic();
+  }, [message]);
+
   if (!message) return null;
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-[60] animate-rise">
+    /* role="status" so a screen reader announces it. Without that, "added" was
+       a purely visual event and a blind user got no confirmation at all. */
+    <div role="status" aria-live="polite"
+         className="fixed left-1/2 -translate-x-1/2 bottom-24 sm:bottom-8 z-[60] animate-rise pointer-events-none">
       <div className="surface rounded-2xl px-4 py-2.5 flex items-center gap-2.5 text-sm shadow-xl"
            style={{ background: 'var(--bg-elev)' }}>
         <span className="grid place-items-center size-5 rounded-full bg-brand-500/20 text-good">

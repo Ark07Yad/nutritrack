@@ -14,10 +14,10 @@ export const ACTIVITY_LEVELS = [
 ];
 
 export const GOALS = [
-  { id: 'lose',     label: 'Lose fat',        icon: '📉', desc: 'Drop body fat while holding on to muscle' },
-  { id: 'maintain', label: 'Maintain',        icon: '⚖️', desc: 'Stay where you are and eat consistently' },
-  { id: 'gain',     label: 'Build muscle',    icon: '📈', desc: 'Gain lean mass with a controlled surplus' },
-  { id: 'recomp',   label: 'Recomposition',   icon: '🔄', desc: 'Lose fat and gain muscle at the same weight' },
+  { id: 'lose',     label: 'Lose fat',        icon: 'trendDown', desc: 'Drop body fat while holding on to muscle' },
+  { id: 'maintain', label: 'Maintain',        icon: 'scale', desc: 'Stay where you are and eat consistently' },
+  { id: 'gain',     label: 'Build muscle',    icon: 'trendUp', desc: 'Gain lean mass with a controlled surplus' },
+  { id: 'recomp',   label: 'Recomposition',   icon: 'refresh', desc: 'Lose fat and gain muscle at the same weight' },
 ];
 
 /** 1 kg of body fat ≈ 7700 kcal. */

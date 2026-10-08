@@ -16,6 +16,7 @@ import {
 import {
   Badge, Button, Card, Field, Icon, Input, NumberInput, Segmented, Select,
   SectionTitle, Sheet, Stat,
+  TileIcon,
 } from './ui';
 
 export default function Profile({ toast }) {
@@ -229,7 +230,7 @@ export default function Profile({ toast }) {
               className={`p-3.5 rounded-2xl text-left border transition-all active:scale-[0.98]
                 ${p.goal === g.id ? 'bg-brand-500/12 border-brand-400/40' : 'surface hover:[background:var(--surface-hover)]'}`}
             >
-              <div className="text-lg mb-1">{g.icon}</div>
+              <TileIcon name={g.icon} tone={p.goal === g.id ? 'good' : 'dim'} className="mb-1.5" />
               <div className="text-[13px] font-medium">{g.label}</div>
             </button>
           ))}
@@ -257,7 +258,7 @@ export default function Profile({ toast }) {
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[['Protein', n.macros.protein, 'text-good'], ['Carbs', n.macros.carbs, 'text-info'], ['Fat', n.macros.fat, 'text-warn']].map(([l, v, c]) => (
             <div key={l} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
-              <div className="text-[10.5px] uppercase tracking-wider text-faint">{l}</div>
+              <div className="text-[11px] uppercase tracking-wider text-faint">{l}</div>
               <div className={`text-lg font-semibold tabular mt-1 ${c}`}>{v}<span className="text-[11px] text-faint ml-0.5">g</span></div>
             </div>
           ))}
@@ -268,14 +269,14 @@ export default function Profile({ toast }) {
       <Card className="p-5">
         <SectionTitle icon="leaf">Diet</SectionTitle>
         <div className="grid grid-cols-3 gap-2">
-          {[['vegan', '🌱', 'Vegan'], ['vegetarian', '🥗', 'Vegetarian'], ['nonveg', '🍗', 'Non-veg']].map(([id, icon, label]) => (
+          {[['vegan', 'sprout', 'Vegan'], ['vegetarian', 'leaf', 'Vegetarian'], ['nonveg', 'drumstick', 'Non-veg']].map(([id, icon, label]) => (
             <button
               key={id}
               onClick={() => set({ dietMode: id })}
               className={`p-3.5 rounded-2xl text-center border transition-all active:scale-[0.98]
                 ${p.dietMode === id ? 'bg-brand-500/12 border-brand-400/40' : 'surface hover:[background:var(--surface-hover)]'}`}
             >
-              <div className="text-xl mb-1.5">{icon}</div>
+              <TileIcon name={icon} tone={p.dietMode === id ? 'good' : 'dim'} className="mx-auto mb-2" />
               <div className="text-[12.5px] font-medium">{label}</div>
             </button>
           ))}
@@ -317,9 +318,9 @@ export default function Profile({ toast }) {
             value={state.theme}
             onChange={(theme) => dispatch({ type: 'theme', theme })}
             options={[
-              { value: 'dark', label: '🌙 Dark' },
-              { value: 'light', label: '☀️ Bright' },
-              { value: 'system', label: '⚙️ Auto' },
+              { value: 'dark', label: 'Dark', icon: <Icon name="moon" className="size-4" /> },
+              { value: 'light', label: 'Bright', icon: <Icon name="sun" className="size-4" /> },
+              { value: 'system', label: 'Auto', icon: <Icon name="settings" className="size-4" /> },
             ]}
           />
         </div>
@@ -364,7 +365,7 @@ function Toggle({ checked, onChange, label, hint }) {
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full shrink-0 mt-0.5 transition-colors duration-200
+        className={`hit relative w-11 h-6 rounded-full shrink-0 mt-0.5 transition-colors duration-200
           ${checked ? 'metal' : ''}`}
         style={checked ? undefined : { background: 'var(--border-strong)' }}
       >
@@ -446,7 +447,7 @@ function ReminderSettings({ toast }) {
             <Toggle
               checked={!!r.water.on}
               onChange={(on) => setSection('water', { on })}
-              label="💧 Water"
+              label="Water"
               hint="Only fires while you are still short of your daily target."
             />
             {r.water.on && (
@@ -484,8 +485,8 @@ function ReminderSettings({ toast }) {
             <Toggle
               checked={!!r.streak.on}
               onChange={(on) => setSection('streak', { on })}
-              label="🔥 Daily streak"
-              hint="An evening check if nothing is logged, and a celebration when you hit 3, 7, 14, 30, 60, 100 or 365 days."
+              label="Daily streak"
+              hint="An evening check if nothing is logged, and a celebration at every milestone from 3 days to 1000."
             />
             {r.streak.on && (
               <Field label="Evening check at" className="mt-4">

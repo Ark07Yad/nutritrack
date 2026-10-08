@@ -38,6 +38,29 @@
   --animate-rise: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-sheet-in: sheet-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-sheet-out: sheet-out 0.16s cubic-bezier(0.4, 0, 1, 1) both;
+  --animate-fade-out: fade-out 0.16s ease-in both;
+
+  /* One vocabulary for motion: things arrive decelerating, leave accelerating
+     and leave faster than they came, and anything that answers a press does so
+     quickly enough to feel attached to the finger. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes sheet-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(24px); }
+}
+@keyframes fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
 }
 
 @keyframes rise {
@@ -110,6 +133,10 @@
   --tone-iris:  #818cf8;
   --tone-flame: #fb923c;
 
+  --focus: #5cf0b8;
+  /* The light that follows the pointer across a card. */
+  --spot:  rgb(255 255 255 / 0.07);
+
   color-scheme: dark;
 }
 
@@ -125,7 +152,11 @@
   --border-strong: rgb(10 20 16 / 0.2);
   --text:          #0d100f;
   --text-dim:      #5b6360;
-  --text-faint:    #868e8b;
+  /* Was #868e8b, which measured 3.1:1 on the page and 3.4:1 on a card — under
+     the 4.5:1 that body text needs. Every label, unit and hint in the app is
+     set in this colour, so in bright mode most of the secondary text was
+     failing. This is the lightest grey that clears 4.5 on both. */
+  --text-faint:    #6a726f;
   --shadow-card:   0 1px 2px rgb(10 20 16 / 0.05), 0 12px 28px -16px rgb(10 20 16 / 0.2);
   --glow-a:        rgb(0 179 119 / 0.10);
   --glow-b:        rgb(0 140 110 / 0.06);
@@ -147,6 +178,9 @@
   --tone-info:  #0369a1;
   --tone-iris:  #4338ca;
   --tone-flame: #c2410c;
+
+  --focus: #00714f;
+  --spot:  rgb(0 179 119 / 0.07);
 
   color-scheme: light;
 }
@@ -228,6 +262,53 @@ body::before {
 
 @utility tabular { font-variant-numeric: tabular-nums; }
 
+/*
+ * A bigger target than the thing you can see.
+ *
+ * Chips, steppers and icon buttons are drawn at 30–36px because that is what
+ * looks right in a dense row, and a thumb needs about 44. Making them visibly
+ * taller would bloat every screen, so the tappable area is extended past the
+ * edge instead. Touch devices only — on a desktop it would make hover states
+ * fire before the pointer reaches the control. The horizontal reach is kept
+ * to half a typical gap so neighbours in a row do not steal each other's taps.
+ */
+@utility hit {
+  position: relative;
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -8px -3px;
+    }
+  }
+}
+
+/*
+ * A soft light that follows the pointer across a card.
+ *
+ * The position arrives as --mx/--my from one delegated listener (see
+ * lib/motion.js), so there is no per-card handler and nothing runs at all on
+ * a touch screen. It sits behind the content and takes no pointer events — it
+ * is decoration and must never be the reason something is harder to click.
+ */
+@utility spotlight {
+  isolation: isolate;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(24rem circle at var(--mx, 50%) var(--my, 0%), var(--spot), transparent 62%);
+    transition: opacity 0.35s ease;
+  }
+  @media (hover: hover) {
+    &:hover::before { opacity: 1; }
+  }
+}
+
 /* Scrollbars */
 @layer base {
   ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -241,6 +322,33 @@ body::before {
   ::-webkit-scrollbar-thumb:hover { background: var(--text-faint); background-clip: content-box; }
 
   input, select, textarea, button { font: inherit; color: inherit; }
+
+  /* Tailwind 4 resets buttons to the default arrow, so nothing in the app
+     looked clickable on a desktop — measured, 175 of 175 controls. */
+  button, [role='button'], [role='tab'], a[href], summary, select, label[for] { cursor: pointer; }
+  button:disabled, [aria-disabled='true'] { cursor: not-allowed; }
+
+  /* No double-tap-to-zoom on controls, which is also what removes the delay
+     before a tap registers. Pinch zoom on the page is unaffected. */
+  button, [role='tab'], a[href], input, select, label { touch-action: manipulation; }
+
+  /* One focus ring, everywhere, keyboard only. Text fields opt out with
+     outline-none because they already change their border on focus. */
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  /* The ring's colour is set at rest, not only on focus. Otherwise anything
+     with `transition-all` animates outline-color from its default — the
+     element's own text colour — so the ring arrives grey and turns green a
+     fifth of a second later. With no change in colour there is nothing to
+     animate. Zero specificity, so any utility still overrides it. */
+  :where(*) { outline-color: var(--focus); }
+
+  /* Keep whatever has focus clear of the fixed bottom bar. */
+  html { scroll-padding: 1rem 0 7.5rem; }
+
+  h1, h2, h3 { text-wrap: balance; }
 
   input[type='range'] {
     -webkit-appearance: none;
@@ -266,6 +374,21 @@ body::before {
   }
   input[type='range']::-webkit-slider-thumb:active { transform: scale(1.18); }
 
+  /* Firefox draws its own slider and ignores every rule above. */
+  input[type='range']::-moz-range-track {
+    height: 6px;
+    border-radius: 99px;
+    background: var(--border-strong);
+  }
+  input[type='range']::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    border-radius: 99px;
+    background: var(--metal);
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--border-strong), 0 4px 12px rgb(0 179 119 / 0.45);
+  }
+
   input[type='number']::-webkit-outer-spin-button,
   input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   input[type='number'] { -moz-appearance: textfield; }
@@ -283,3 +406,15 @@ body::before {
 .recharts-cartesian-grid line { stroke: var(--border); }
 .recharts-text { fill: var(--text-faint); font-size: 11px; }
 .recharts-curve.recharts-tooltip-cursor { stroke: var(--border-strong); }
+
+/* Theme switch cross-fades instead of snapping. Browsers without the View
+   Transitions API never create these pseudo-elements and switch instantly. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.28s;
+  animation-timing-function: ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}

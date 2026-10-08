@@ -131,7 +131,7 @@ export default function Coach({ date, onNavigate }) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <Markdown text={m.text} />
-                    {m.via && <div className="text-[10px] text-faint mt-2">{m.via}</div>}
+                    {m.via && <div className="text-[11px] text-faint mt-2">{m.via}</div>}
                   </div>
                 </div>
               )

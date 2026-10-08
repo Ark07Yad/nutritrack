@@ -4,7 +4,7 @@ import {
   ACTIVITY_LEVELS, GOALS, bmi, bmiCategory, goalPlan, macroTargets,
   healthyWeightRange, cmToFeet, feetToCm, estimateBodyFat,
 } from '../lib/calc';
-import { Button, Card, Field, Icon, Input, NumberInput, Select, Segmented, ThemeToggle } from './ui';
+import { Button, Card, Field, Icon, Input, NumberInput, Select, Segmented, ThemeToggle, TileIcon } from './ui';
 
 const STEPS = ['You', 'Body', 'Activity', 'Goal', 'Diet', 'Plan'];
 
@@ -64,7 +64,7 @@ export default function Onboarding() {
                 className="h-1 rounded-full transition-all duration-500"
                 style={{ background: i <= step ? 'linear-gradient(90deg, var(--color-brand-300), var(--color-brand-500))' : 'var(--border)' }}
               />
-              <div className={`text-[10px] mt-1.5 transition-colors ${i === step ? 'text-good font-medium' : 'text-faint'}`}>
+              <div className={`text-[11px] mt-1.5 transition-colors ${i === step ? 'text-good font-medium' : 'text-faint'}`}>
                 {s}
               </div>
             </div>
@@ -310,7 +310,7 @@ function StepGoal({ p, set, plan, range }) {
             className={`p-3.5 rounded-2xl text-left border transition-all active:scale-[0.98]
               ${p.goal === g.id ? 'bg-brand-500/12 border-brand-400/40' : 'surface hover:[background:var(--surface-hover)]'}`}
           >
-            <div className="text-xl mb-1.5">{g.icon}</div>
+            <TileIcon name={g.icon} tone={p.goal === g.id ? 'good' : 'dim'} className="mb-2" />
             <div className="text-[13.5px] font-medium">{g.label}</div>
             <div className="text-[11px] text-faint mt-1 leading-snug">{g.desc}</div>
           </button>
@@ -358,9 +358,9 @@ function StepGoal({ p, set, plan, range }) {
 
 function StepDiet({ p, set }) {
   const options = [
-    { id: 'vegan', icon: '🌱', label: 'Vegan', desc: 'No animal products at all' },
-    { id: 'vegetarian', icon: '🥗', label: 'Vegetarian', desc: 'Plants and dairy' },
-    { id: 'nonveg', icon: '🍗', label: 'Non-vegetarian', desc: 'Everything' },
+    { id: 'vegan', icon: 'sprout', label: 'Vegan', desc: 'No animal products at all' },
+    { id: 'vegetarian', icon: 'leaf', label: 'Vegetarian', desc: 'Plants and dairy' },
+    { id: 'nonveg', icon: 'drumstick', label: 'Non-vegetarian', desc: 'Everything' },
   ];
   return (
     <>
@@ -373,7 +373,7 @@ function StepDiet({ p, set }) {
             className={`flex items-center gap-3.5 p-4 rounded-2xl text-left border transition-all active:scale-[0.99]
               ${p.dietMode === o.id ? 'bg-brand-500/12 border-brand-400/40' : 'surface hover:[background:var(--surface-hover)]'}`}
           >
-            <span className="text-2xl">{o.icon}</span>
+            <TileIcon name={o.icon} tone={p.dietMode === o.id ? 'good' : 'dim'} size="lg" />
             <div className="min-w-0">
               <div className="text-[14.5px] font-medium">{o.label}</div>
               <div className="text-[12px] text-faint mt-0.5">{o.desc}</div>
@@ -439,7 +439,7 @@ function StepPlan({ p, plan, macros, bmiValue }) {
           ['Fat', macros.fat, 'g', 'text-warn'],
         ].map(([l, v, u, c]) => (
           <div key={l} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
-            <div className="text-[10.5px] uppercase tracking-wider text-faint">{l}</div>
+            <div className="text-[11px] uppercase tracking-wider text-faint">{l}</div>
             <div className={`text-lg font-semibold tabular mt-1 ${c}`}>{v}<span className="text-[11px] text-faint ml-0.5">{u}</span></div>
           </div>
         ))}

@@ -109,7 +109,7 @@ export default function WeighIn({ compact = false }) {
             diet failing. Only a phase where it is actually true renders.
           */}
           {cycleNote && (
-            <p className="text-[10.5px] text-warn mt-2 leading-snug">
+            <p className="text-[11px] text-warn mt-2 leading-snug">
               {cycleNote.split('. ')[0]}.
             </p>
           )}
@@ -190,7 +190,7 @@ export default function WeighIn({ compact = false }) {
           <button
             key={d}
             onClick={() => setDraft((v) => +(v + d).toFixed(1))}
-            className="px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
+            className="hit px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
           >
             {d > 0 ? '+' : ''}{d}
           </button>
@@ -198,7 +198,7 @@ export default function WeighIn({ compact = false }) {
         {analysis.latest && (
           <button
             onClick={() => setDraft(toDisplay(analysis.latest.weight))}
-            className="px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
+            className="hit px-2.5 py-1 rounded-full text-[11.5px] surface text-dim hover:text-[color:var(--text)] transition-colors"
           >
             same as last
           </button>
@@ -225,9 +225,9 @@ export default function WeighIn({ compact = false }) {
           ].map(([label, value, u], i) => (
             <div key={label} className="rounded-2xl p-3 text-center animate-rise"
                  style={{ background: 'var(--surface)', ...stagger(i) }}>
-              <div className="text-[10.5px] uppercase tracking-wider text-faint">{label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-faint">{label}</div>
               <div className="text-[16px] font-semibold tabular mt-1">
-                {value}<span className="text-[10px] text-faint ml-0.5">{value === '—' ? '' : u}</span>
+                {value}<span className="text-[11px] text-faint ml-0.5">{value === '—' ? '' : u}</span>
               </div>
             </div>
           ))}

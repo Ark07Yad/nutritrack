@@ -11,6 +11,7 @@ import { prettyDate, isToday, shiftKey, todayKey } from '../lib/calc';
 import {
   Badge, Bar, Button, Card, Chip, Empty, Field, Icon, IconButton, Input, NumberInput, PortionPicker,
   SectionTitle, Segmented, Sheet, Stepper, fmt,
+  TileIcon,
 } from './ui';
 
 export default function Diary({ date, setDate, focusSlot, clearFocus, toast }) {
@@ -90,7 +91,7 @@ function SlotSection({ slot, date, entries, budget, onAdd, dispatch, toast }) {
   return (
     <Card className="overflow-visible">
       <div className="flex items-center gap-3 px-4 py-3.5 border-b border-hair">
-        <span className="text-xl">{slot.icon}</span>
+        <TileIcon name={slot.icon} tone={slot.tone} size="lg" />
         <div className="flex-1 min-w-0">
           <div className="text-[14.5px] font-semibold">{slot.label}</div>
           <div className="text-[11.5px] text-faint tabular">
@@ -193,7 +194,7 @@ function FoodPicker({ slot, date, onClose, toast }) {
       title={`Add to ${slotMeta.label.toLowerCase()}`}
       subtitle="Search the database, pick a ready-made meal, or build your own from scratch"
     >
-      <Segmented options={TABS} value={tab} onChange={setTab} className="mb-4 w-full overflow-x-auto" />
+      <Segmented options={TABS} value={tab} onChange={setTab} className="mb-4 w-full overflow-x-auto overflow-y-hidden" />
       {tab === 'search' && <SearchTab slot={slot} date={date} toast={toast} onClose={onClose} />}
       {tab === 'ideas' && <IdeasTab slot={slot} date={date} toast={toast} onClose={onClose} />}
       {tab === 'build' && <BuildTab slot={slot} date={date} toast={toast} onClose={onClose} />}
@@ -389,8 +390,8 @@ function SearchTab({ slot, date, toast }) {
         <div className="grid grid-cols-4 gap-2 mb-4">
           {[['kcal', n.kcal, ''], ['Protein', n.protein, 'g'], ['Carbs', n.carbs, 'g'], ['Fat', n.fat, 'g']].map(([l, v, u]) => (
             <div key={l} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
-              <div className="text-[10px] uppercase tracking-wider text-faint">{l}</div>
-              <div className="text-[17px] font-semibold tabular mt-1">{fmt(v)}<span className="text-[10px] text-faint">{u}</span></div>
+              <div className="text-[11px] uppercase tracking-wider text-faint">{l}</div>
+              <div className="text-[17px] font-semibold tabular mt-1">{fmt(v)}<span className="text-[11px] text-faint">{u}</span></div>
             </div>
           ))}
         </div>
@@ -414,7 +415,7 @@ function SearchTab({ slot, date, toast }) {
         />
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+      <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pt-1.5 -mt-1.5 pb-2 mb-3 -mx-1 px-1">
         {categories.map((c) => (
           <Chip key={c} active={cat === c} onClick={() => setCat(c)}>{c}</Chip>
         ))}
@@ -441,7 +442,7 @@ function SearchTab({ slot, date, toast }) {
           )}
           <div className="flex items-center gap-2 pt-1">
             <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
-            <span className="text-[10.5px] uppercase tracking-wider text-faint">All foods</span>
+            <span className="text-[11px] uppercase tracking-wider text-faint">All foods</span>
             <div className="h-px flex-1" style={{ background: 'var(--border)' }} />
           </div>
         </div>
@@ -471,7 +472,7 @@ function SearchTab({ slot, date, toast }) {
               </div>
               <div className="text-right shrink-0">
                 <div className="text-[14px] font-semibold tabular">{Math.round(f.per100.kcal)}</div>
-                <div className="text-[9.5px] text-faint">kcal/100g</div>
+                <div className="text-[11px] text-faint">kcal/100g</div>
               </div>
             </button>
           ))}
@@ -493,10 +494,10 @@ function QuickRow({ title, icon, items, onQuick, onOpen, showCount = false }) {
   if (!items.length) return null;
   return (
     <div>
-      <div className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-faint mb-2">
+      <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-faint mb-2">
         <Icon name={icon} className="size-3.5" /> {title}
       </div>
-      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex gap-1.5 overflow-x-auto overflow-y-hidden pt-1.5 -mt-1.5 pb-1.5 -mx-1 px-1">
         {items.map((it, i) => (
           <div
             key={it.food.id}
@@ -506,7 +507,7 @@ function QuickRow({ title, icon, items, onQuick, onOpen, showCount = false }) {
           >
             <button onClick={() => onOpen(it.food)} className="min-w-0 text-left">
               <div className="text-[12.5px] font-medium truncate">{it.food.name}</div>
-              <div className="text-[10.5px] text-faint tabular">
+              <div className="text-[11px] text-faint tabular">
                 {Math.round((it.food.per100.kcal * (it.grams || it.food.servingGrams || 100)) / 100)} kcal
                 {showCount ? ` · ${it.count}×` : ''}
               </div>
@@ -786,8 +787,8 @@ function BuildTab({ slot, date, toast, onClose }) {
               <div className="grid grid-cols-4 gap-2 mb-3">
                 {[['kcal', totals.kcal, ''], ['Protein', totals.protein, 'g'], ['Carbs', totals.carbs, 'g'], ['Fat', totals.fat, 'g']].map(([l, v, u]) => (
                   <div key={l} className="rounded-2xl p-3 text-center" style={{ background: 'var(--surface)' }}>
-                    <div className="text-[10px] uppercase tracking-wider text-faint">{l}</div>
-                    <div className="text-[17px] font-semibold tabular mt-1">{fmt(v)}<span className="text-[10px] text-faint">{u}</span></div>
+                    <div className="text-[11px] uppercase tracking-wider text-faint">{l}</div>
+                    <div className="text-[17px] font-semibold tabular mt-1">{fmt(v)}<span className="text-[11px] text-faint">{u}</span></div>
                   </div>
                 ))}
               </div>
@@ -971,7 +972,7 @@ function NutrientPeek({ n }) {
 
   return (
     <div className="rounded-2xl p-3" style={{ background: 'var(--surface)' }}>
-      <div className="text-[10px] uppercase tracking-wider text-faint mb-2">Notable micronutrients</div>
+      <div className="text-[11px] uppercase tracking-wider text-faint mb-2">Notable micronutrients</div>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {items.map(([l, v, u]) => (
           <span key={l} className="text-[11.5px] text-dim tabular">

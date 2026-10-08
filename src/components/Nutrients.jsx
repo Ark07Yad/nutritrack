@@ -46,7 +46,7 @@ export default function Nutrients({ date }) {
           </div>
           <div className="text-right shrink-0">
             <div className="text-[30px] font-semibold tabular leading-none gradient-text">{met}<span className="text-[15px] text-faint">/{nonLimit}</span></div>
-            <div className="text-[10.5px] uppercase tracking-wider text-faint mt-1.5">targets met</div>
+            <div className="text-[11px] uppercase tracking-wider text-faint mt-1.5">targets met</div>
           </div>
         </div>
 

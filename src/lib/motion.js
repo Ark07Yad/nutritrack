@@ -203,3 +203,100 @@ export function animateOut(node, done, { duration = 220 } = {}) {
   // never decides whether the delete happens.
   setTimeout(finish, duration + 80);
 }
+
+/* ───────────────────────────── Pointer spotlight ─────────────────────────────
+ *
+ * One listener for the whole app, not one per card. It finds the card under
+ * the pointer and hands its coordinates to CSS as --mx/--my; the gradient
+ * itself is drawn by the `spotlight` utility in index.css.
+ *
+ * Skipped entirely on devices that cannot hover and when motion is reduced —
+ * there the utility's ::before simply never becomes visible.
+ */
+export function installSpotlight() {
+  if (typeof window === 'undefined') return () => {};
+  if (!window.matchMedia('(hover: hover)').matches || prefersReducedMotion()) return () => {};
+
+  let frame = 0;
+  let last = null;
+
+  const paint = () => {
+    frame = 0;
+    if (!last) return;
+    const card = last.target instanceof Element ? last.target.closest('.spotlight') : null;
+    if (!card) return;
+    const box = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${last.x - box.left}px`);
+    card.style.setProperty('--my', `${last.y - box.top}px`);
+  };
+
+  // At most one write per frame however fast the pointer moves.
+  const onMove = (e) => {
+    if (e.pointerType && e.pointerType !== 'mouse') return;
+    last = { target: e.target, x: e.clientX, y: e.clientY };
+    if (!frame) frame = requestAnimationFrame(paint);
+  };
+
+  document.addEventListener('pointermove', onMove, { passive: true });
+  return () => {
+    document.removeEventListener('pointermove', onMove);
+    if (frame) cancelAnimationFrame(frame);
+  };
+}
+
+/* ───────────────────────────────── Haptics ─────────────────────────────────
+ *
+ * A short tick when something is confirmed — a food logged, a milestone hit.
+ * Reserved for confirmations: a phone that buzzes on every tap is worse than
+ * one that never does. Not available on iOS Safari, where this is a no-op.
+ */
+export function haptic(pattern = 8) {
+  try {
+    if (prefersReducedMotion()) return;
+    // Browsers refuse to vibrate before the first tap and log a warning each
+    // time they do. A confirmation that arrives without one — a milestone
+    // noticed on launch — simply goes without.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* blocked without a user gesture, or unsupported — nothing to do */
+  }
+}
+
+/* ──────────────────────────── Whole-page transition ────────────────────────────
+ *
+ * Runs `update` inside a view transition where the browser has them, so a
+ * theme switch cross-fades rather than snapping.
+ *
+ * `update` always runs, exactly once, whatever the transition does. The API
+ * is allowed to skip, reject or never start — a hidden tab is one way — and a
+ * theme that failed to change because an animation did not play would be a
+ * far worse bug than a theme that changed without one.
+ */
+export function withViewTransition(update) {
+  let done = false;
+  const run = () => {
+    if (done) return;
+    done = true;
+    update();
+  };
+
+  const supported =
+    typeof document !== 'undefined' &&
+    typeof document.startViewTransition === 'function' &&
+    document.visibilityState === 'visible' &&
+    !prefersReducedMotion();
+
+  if (!supported) return run();
+
+  try {
+    const transition = document.startViewTransition(run);
+    transition.ready?.catch(() => {});
+    transition.finished?.catch(() => {});
+  } catch {
+    /* fall through to the guard below */
+  }
+  // The callback is normally invoked within a frame. If it has not been, do
+  // the work anyway.
+  setTimeout(run, 250);
+}

@@ -269,14 +269,14 @@ export default function Progress({ date }) {
                         style={{ width: `${Math.min(100, (d.kcal / n.plan.target) * 100)}%` }}
                       />
                     </div>
-                    <div className="text-[10.5px] text-faint tabular mt-1.5">
+                    <div className="text-[11px] text-faint tabular mt-1.5">
                       P {d.protein}g · C {d.carbs}g · F {d.fat}g · fibre {d.fiber}g
                       {d.burned > 0 && ` · burned ${d.burned}`}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-[13.5px] font-semibold tabular">{d.kcal}</div>
-                    {d.weight && <div className="text-[10px] text-faint tabular">{d.weight} kg</div>}
+                    {d.weight && <div className="text-[11px] text-faint tabular">{d.weight} kg</div>}
                   </div>
                 </>
               ) : (
