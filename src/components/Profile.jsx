@@ -9,6 +9,7 @@ import {
   describeSchedule, loggingStreak,
 } from '../lib/reminders';
 import { storageStatus, requestPersistence, listSnapshots, restoreSnapshot } from '../lib/persist';
+import { isArcLinkOn, setArcLink, onArcLink } from '../lib/arcLink';
 import {
   checkServer, subscribe, unsubscribe, sendTestPush,
   pushServerConfigured, pushServerUrl, pushSupported,
@@ -660,8 +661,48 @@ const formatBytes = (b) => {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 };
 
+/**
+ * Link to ARC — the owner's personal dashboard on the same Mac. Opt-in and
+ * per browser; lib/arcLink.js lists exactly what is sent.
+ */
+function ArcLink({ state }) {
+  const [on, setOn] = useState(isArcLinkOn);
+  const [status, setStatus] = useState({ state: 'off', at: null });
+  useEffect(() => onArcLink(setStatus), []);
+  const label = {
+    off: 'Off',
+    waiting: 'On — waiting for the next change',
+    sending: 'Sending…',
+    ok: `Synced ${status.at ? new Date(status.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}`,
+    offline: 'ARC isn’t running — it catches up on your next change',
+    refused: 'ARC refused the update — check ARC’s allowed origins',
+  }[status.state];
+  return (
+    <div className="p-3.5 rounded-2xl mt-4 flex flex-wrap items-center gap-3 surface">
+      <div className="min-w-0 flex-1">
+        <div className="text-[13px] font-medium">Link to ARC</div>
+        <p className="text-[11.5px] text-dim leading-relaxed mt-0.5">
+          Sends the last 60 days of meals (names and macros), water, weight, steps and workouts to ARC on this computer
+          whenever they change — never your AI key, cycle data, notes or profile. {on && <span>Status: {label}.</span>}
+        </p>
+      </div>
+      <Button
+        variant={on ? 'primary' : 'ghost'}
+        size="sm"
+        aria-pressed={on}
+        onClick={() => {
+          setArcLink(!on, state);
+          setOn(!on);
+        }}
+      >
+        {on ? 'Linked' : 'Link to ARC'}
+      </Button>
+    </div>
+  );
+}
+
 function StorageSettings({ toast, exportData, importData }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
   const [status, setStatus] = useState(null);
   const [snapshots, setSnapshots] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -748,6 +789,8 @@ function StorageSettings({ toast, exportData, importData }) {
           )}
         </>
       )}
+
+      <ArcLink state={state} />
 
       <div className="h-px my-4" style={{ background: 'var(--border)' }} />
 

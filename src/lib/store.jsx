@@ -15,6 +15,7 @@ import { DEFAULT_REMINDERS, runReminderTick, registerServiceWorker } from './rem
 import { DEFAULT_CYCLE } from './cycle';
 import { syncPrefs } from './push';
 import * as persist from './persist';
+import { scheduleArcSync } from './arcLink';
 import { withViewTransition } from './motion';
 
 export const emptyDay = () => ({
@@ -379,6 +380,7 @@ export function StoreProvider({ children }) {
   useEffect(() => {
     if (!ready) return;
     persist.save(state);
+    scheduleArcSync(state); // opt-in live link to ARC; a no-op unless turned on in Profile
   }, [state, ready]);
 
   /* ── Never lose the last few hundred milliseconds of edits ── */
